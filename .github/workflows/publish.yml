@@ -30,22 +30,18 @@ jobs:
       - name: Configure Poetry
         run: |
             poetry config virtualenvs.create false
-            poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
 
-      - name: Build Package and update version
+      - name: Build Package, update version, and publish to PyPI
         run: |
-            poetry build
+            poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
             poetry version ${{ github.event.release.tag_name }}
+            poetry publish --build
 
       - name: Upload Assets to GitHub Release
         run: gh release upload ${{ github.event.release.tag_name }} dist/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish Package to PyPI
-        run: |
-            poetry publish
-    
       - name: Create PR to update version
         run: |
             git config user.name "github-actions[bot]"
@@ -56,6 +52,7 @@ jobs:
             git add pyproject.toml
             git commit -m "chore: update version to ${{ github.event.release.tag_name }}"
             git push origin $branch
-            gh pr create --title "chore: update version to ${{ github.event.release.tag_name }}" --body "This PR updates the version to ${{ github.event.release.tag_name }}" --base main --head $branch
+            gh pr create --title "chore: Bump version to ${{ github.event.release.tag_name }} after successful PyPI publish" --body "This PR updates the project version to ${{ github.event.release.tag_name }} following a successful publish to PyPI." --base main --head $branch
+
         env:
             GH_TOKEN: ${{ secrets.PR_PAT }}
