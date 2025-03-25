@@ -34,7 +34,7 @@ jobs:
       - name: Build Package, update version, and publish to PyPI
         run: |
             poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
-            poetry bursion ${{ github.event.release.tag_name }}
+            poetry version ${{ github.event.release.tag_name }}
             poetry publish --build
 
       - name: Upload Assets to GitHub Release
