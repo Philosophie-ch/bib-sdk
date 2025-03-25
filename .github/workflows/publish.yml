@@ -30,22 +30,19 @@ jobs:
       - name: Configure Poetry
         run: |
             poetry config virtualenvs.create false
-            poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
 
-      - name: Build Package and update version
+      - name: Build Package, update version, and publish to PyPI
         run: |
+            poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
             poetry build
             poetry version ${{ github.event.release.tag_name }}
+            poetry publish
 
       - name: Upload Assets to GitHub Release
         run: gh release upload ${{ github.event.release.tag_name }} dist/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish Package to PyPI
-        run: |
-            poetry publish
-    
       - name: Create PR to update version
         run: |
             git config user.name "github-actions[bot]"
