@@ -1,0 +1,61 @@
+name: Publish Package on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+
+  build-and-publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Configure Poetry
+        run: |
+            poetry config virtualenvs.create false
+            poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Build Package and update version
+        run: |
+            poetry build
+            poetry version ${{ github.event.release.tag_name }}
+
+      - name: Upload Assets to GitHub Release
+        run: gh release upload ${{ github.event.release.tag_name }} dist/*
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Package to PyPI
+        run: |
+            poetry publish
+    
+      - name: Create PR to update version
+        run: |
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            timestamp=$(date +%s)
+            branch="update-version-$timestamp"
+            git checkout -b $branch
+            git add pyproject.toml
+            git commit -m "chore: update version to ${{ github.event.release.tag_name }}"
+            git push origin $branch
+            gh pr create --title "chore: update version to ${{ github.event.release.tag_name }}" --body "This PR updates the version to ${{ github.event.release.tag_name }}" --base main --head $branch
+        env:
+            GH_TOKEN: ${{ secrets.PR_PAT }}
