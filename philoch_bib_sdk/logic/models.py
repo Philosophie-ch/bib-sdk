@@ -96,126 +96,6 @@ class Journal:
 
 
 ############
-# Note
-############
-
-
-@attrs.define(frozen=True, slots=True)
-class Note(BaseRenderable):
-    """
-    Notes (metadata) about a publication.
-
-    Args:
-        text: str = ""
-        text_latex: str = ""
-        id: int = -1
-    """
-
-    pass
-
-
-############
-# Keywords
-############
-
-
-@attrs.define(frozen=True, slots=True)
-class Keyword:
-    """
-    Keyword of a publication.
-
-    Args:
-        name: str = ""
-        id: int = -1
-    """
-
-    name: str = ""
-    id: int = -1
-
-
-@attrs.define(frozen=True, slots=True)
-class Keywords:
-    level1: Keyword = Keyword()
-    level2: Keyword = Keyword()
-    level3: Keyword = Keyword()
-
-
-############
-# Series, Institution, School, Publisher, Type
-############
-
-
-@attrs.define(frozen=True, slots=True)
-class Series(BaseNamedRenderable):
-    """
-    A series of publications.
-
-    Args:
-        name: str = ""
-        name_latex: str = ""
-        id: int = -1
-    """
-
-    pass
-
-
-@attrs.define(frozen=True, slots=True)
-class Institution(BaseNamedRenderable):
-    """
-    An institution that publishes publications.
-
-    Args:
-        name: str = ""
-        name_latex: str = ""
-        id: int = -1
-    """
-
-    pass
-
-
-@attrs.define(frozen=True, slots=True)
-class School(BaseNamedRenderable):
-    """
-    A school that publishes publications.
-
-    Args:
-        name: str = ""
-        name_latex: str = ""
-        id: int = -1
-    """
-
-    pass
-
-
-@attrs.define(frozen=True, slots=True)
-class Publisher(BaseNamedRenderable):
-    """
-    A publisher of publications.
-
-    Args:
-        name: str = ""
-        name_latex: str = ""
-        id: int = -1
-    """
-
-    pass
-
-
-@attrs.define(frozen=True, slots=True)
-class Type(BaseNamedRenderable):
-    """
-    A type of publication.
-
-    Args:
-        name: str = ""
-        name_latex: str = ""
-        id: int = -1
-    """
-
-    pass
-
-
-############
 # BibItem
 ############
 
@@ -267,6 +147,27 @@ class BibItemDate:
 
 
 @attrs.define(frozen=True, slots=True)
+class Keyword:
+    """
+    Keyword of a publication.
+
+    Args:
+        name: str = ""
+        id: int = -1
+    """
+
+    name: str = ""
+    id: int = -1
+
+
+@attrs.define(frozen=True, slots=True)
+class Keywords:
+    level1: Keyword = Keyword()
+    level2: Keyword = Keyword()
+    level3: Keyword = Keyword()
+
+
+@attrs.define(frozen=True, slots=True)
 class PagePair:
     """
     Page numbers of a publication. Can be a range, roman numerals, or a single page.
@@ -278,20 +179,6 @@ class PagePair:
 
     start: str
     end: str = ""
-
-
-@attrs.define(frozen=True, slots=True)
-class IssueTitle(BaseRenderable):
-    """
-    Title of an issue of a publication.
-
-    Args:
-        text: str
-        text_latex: str | None = None
-        id: int | None = None
-    """
-
-    pass
 
 
 @attrs.define(frozen=True, slots=True)
@@ -322,17 +209,17 @@ class BibItem:
     number: str = ""
     pages: Tuple[PagePair, ...] = ()
     eid: str = ""
-    series: Series | None = None
+    series: BaseNamedRenderable | None = None
     address: str = ""
     institution: str = ""
     school: str = ""
-    publisher: Publisher | None = None
-    type: Type | None = None
+    publisher: BaseNamedRenderable | None = None
+    type: BaseNamedRenderable | None = None
     edition: str = ""
-    note: Note | None = None
-    issuetitle: IssueTitle | None = None
+    note: BaseRenderable | None = None
+    issuetitle: BaseRenderable | None = None
     guesteditor: Tuple[Author, ...] = ()
-    further_note: Note | None = None
+    further_note: BaseRenderable | None = None
     urn: str = ""
     eprint: str = ""
     doi: str = ""
@@ -347,9 +234,9 @@ class BibItem:
     _depends_on: Tuple[BibKey, ...] = ()
     dltc_num: int | None = None
     _spec_interest: str = ""
-    _note_perso: Note | None = None
-    _note_stock: Note | None = None
-    _note_status: Note | None = None
+    _note_perso: BaseRenderable | None = None
+    _note_stock: BaseRenderable | None = None
+    _note_status: BaseRenderable | None = None
     _num_in_work: str = ""
     _num_in_work_coll: int | None = None
     _num_coll: int | None = None
