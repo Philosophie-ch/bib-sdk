@@ -1,11 +1,14 @@
-from typing import List
+from typing import Tuple
 from aletk.utils import get_logger
-from philoch_bib_sdk.logic.models import Author
+from philoch_bib_sdk.logic.models import Author, TBibString
 
 lgr = get_logger(__name__)
 
 
-def _full_name_generic(given_name: str, family_name: str) -> str:
+def _full_name_generic(given_name: str, family_name: str, mononym: str) -> str:
+    if mononym:
+        return mononym
+
     if not given_name:
         return ""
 
@@ -15,19 +18,19 @@ def _full_name_generic(given_name: str, family_name: str) -> str:
     return f"{family_name}, {given_name}"
 
 
-def _full_name(author: Author | None, latex: bool = False) -> str:
+def _format_single(author: Author, bibstring_type: TBibString) -> str:
+    given_name = f"{getattr(author.given_name, bibstring_type)}"
+    family_name = f"{getattr(author.family_name, bibstring_type)}"
+    mononym = f"{getattr(author.mononym, bibstring_type)}"
 
-    if not latex:
-        if author is None:
-            return ""
-        return _full_name_generic(author.given_name, author.family_name)
-
-    if author is None:
-        return ""
-    return _full_name_generic(author.given_name_latex, author.family_name_latex)
+    return _full_name_generic(given_name, family_name, mononym)
 
 
-def format_author(authors: List[Author] | None, latex: bool = False) -> str:
-    if authors is None:
-        return ""
-    return " and ".join([_full_name(author, latex=latex) for author in authors])
+def format_author(authors: Tuple[Author, ...], bibstring_type: TBibString) -> str:
+    return " and ".join(
+        [
+            _format_single(author, bibstring_type=bibstring_type)
+            for author in authors
+            if _format_single(author, bibstring_type=bibstring_type)
+        ]
+    )
