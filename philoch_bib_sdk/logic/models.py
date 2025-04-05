@@ -159,14 +159,8 @@ class BibKeyAttr:
     date_suffix: str
 
     def __attrs_post_init__(self) -> None:
-        if (not self.first_author and self.date) or (self.first_author and not self.date):
-            raise BibKeyValidationError("If first_author is set, date must not be empty, and vice versa.")
-
-        if self.date_suffix and not self.date:
-            raise BibKeyValidationError("If year_suffix is set, date must not be empty.")
-
-        if self.other_authors and not self.first_author:
-            raise BibKeyValidationError("If other_authors is set, first_author must not be empty.")
+        if not self.first_author or not self.date:
+            raise BibKeyValidationError("Both 'first_author' and 'date' must not be empty.")
 
 
 class BibItemDateValidationError(Exception):
