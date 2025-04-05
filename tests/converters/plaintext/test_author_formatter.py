@@ -1,91 +1,91 @@
-from philoch_bib_sdk.converters.plaintext.author.formatter import _full_name, _full_name_generic, format_author
-from philoch_bib_sdk.logic.models import Author
+from typing import List
+import pytest
+
+from philoch_bib_sdk.converters.plaintext.author.formatter import _format_single, _full_name_generic, format_author
+from philoch_bib_sdk.logic.default_models import AuthorArgs, default_author
+from philoch_bib_sdk.logic.models import Author, TBibString
+from tests.shared import TTestCase
 
 
-def test_full_name_generic() -> None:
-    """
-    Desiderata:
-    - If given_name is None, return ""
-    - If family_name is None, return given_name
-    - If both are None, return ""
-    - If both are not None, return "family_name, given_name"
-    """
-    assert _full_name_generic("", "Doe") == ""
-    assert _full_name_generic("John", "") == "John"
-    assert _full_name_generic("", "") == ""
-    assert _full_name_generic("John", "Doe") == "Doe, John"
+@pytest.mark.parametrize(
+    "given_name, family_name, mononym, expected",
+    [
+        # If given_name is "", return ""
+        ("", "Doe", "", ""),
+        # If family_name is "", return given_name
+        ("John", "", "", "John"),
+        # If both are "", return ""
+        ("", "", "", ""),
+        # If both are not "", return "family_name, given_name"
+        ("John", "Doe", "", "Doe, John"),
+        # If there's a mononym, return it and ignore the other fields
+        ("Name", "Family", "Aristotle", "Aristotle"),
+    ],
+)
+def test_full_name_generic(given_name: str, family_name: str, mononym: str, expected: str) -> None:
+    assert _full_name_generic(given_name, family_name, mononym) == expected
 
 
-def test_full_name_single_author() -> None:
-    """
-    Desiderata:
-    - If author is None, return ""
-    - If author.given_name is None, return ""
-    - If author.family_name is None, return author.given_name
-    - If both are not None, return "author.family_name, author.given_name"
-    """
-
-    assert _full_name(None) == ""
-    assert _full_name(Author()) == ""
-    assert _full_name(Author("John")) == "John"
-    assert _full_name(Author("", "Doe")) == ""
-    assert _full_name(Author("John", "Doe")) == "Doe, John"
-
-    assert _full_name(None, latex=True) == ""
-    assert _full_name(Author(), latex=True) == ""
-    assert _full_name(Author(given_name_latex="John"), latex=True) == "John"
-    assert _full_name(Author(family_name_latex="Doe"), latex=True) == ""
-    assert _full_name(Author(given_name_latex="John", family_name_latex="Doe"), latex=True) == "Doe, John"
+full_name_cases: TTestCase[AuthorArgs, TBibString, str] = [
+    # simplified cases
+    ({}, "simplified", ""),
+    ({"given_name": {"simplified": "John"}}, "simplified", "John"),
+    ({"family_name": {"simplified": "Doe"}}, "simplified", ""),
+    ({"given_name": {"simplified": "John"}, "family_name": {"simplified": "Doe"}}, "simplified", "Doe, John"),
+    # Latex cases
+    ({}, "simplified", ""),
+    ({"given_name": {"latex": "John"}}, "latex", "John"),
+    ({"family_name": {"latex": "Doe"}}, "latex", ""),
+    ({"given_name": {"latex": "John"}, "family_name": {"latex": "Doe"}}, "latex", "Doe, John"),
+]
 
 
-def test_full_name_author_list() -> None:
-    assert format_author(None) == ""
-    assert format_author([]) == ""
-    assert format_author([Author("John")]) == "John"
-    assert format_author([Author("John", "Doe"), Author("Jane")]) == "Doe, John and Jane"
-    assert format_author([Author("John"), Author("Jane"), Author("Doe")]) == "John and Jane and Doe"
-    assert (
-        format_author([Author("John", "Doe"), Author("Jane", "Doe"), Author("Doe", "Doe")])
-        == "Doe, John and Doe, Jane and Doe, Doe"
-    )
-    assert (
-        format_author([Author("John", "Doe"), Author("Jane", "Doe"), Author("Doe", "Doe")])
-        == "Doe, John and Doe, Jane and Doe, Doe"
-    )
-    assert (
-        format_author([Author("John", "Doe", id=1), Author("Jane", "Doe", id=2), Author("Doe", "Doe", id=3)])
-        == "Doe, John and Doe, Jane and Doe, Doe"
-    )
+@pytest.mark.parametrize(
+    "author_data, bibstring_type, expected",
+    full_name_cases,
+)
+def test_full_name_single_author(author_data: AuthorArgs, bibstring_type: TBibString, expected: str) -> None:
+    author = default_author(**author_data)
+    assert _format_single(author, bibstring_type) == expected
 
-    assert (
-        format_author([Author(given_name_latex="John"), Author(given_name_latex="Jane")], latex=True) == "John and Jane"
-    )
-    assert (
-        format_author(
-            [Author(given_name_latex="John"), Author(given_name_latex="Jane"), Author(given_name_latex="Doe")],
-            latex=True,
-        )
-        == "John and Jane and Doe"
-    )
-    assert (
-        format_author(
-            [
-                Author(given_name_latex="John", family_name_latex="Doe"),
-                Author(given_name_latex="Jane", family_name_latex="Doe"),
-                Author(given_name_latex="Doe", family_name_latex="Doe"),
-            ],
-            latex=True,
-        )
-        == "Doe, John and Doe, Jane and Doe, Doe"
-    )
-    assert (
-        format_author(
-            [
-                Author(given_name_latex="John", family_name_latex="Doe"),
-                Author(given_name_latex="Jane", family_name_latex="Doe"),
-                Author(given_name_latex="Doe", family_name_latex="Doe"),
-            ],
-            latex=True,
-        )
-        == "Doe, John and Doe, Jane and Doe, Doe"
-    )
+
+# Simplified name cases
+john_simplified: AuthorArgs = {"given_name": {"simplified": "John"}}
+jane_simplified: AuthorArgs = {"given_name": {"simplified": "Jane"}}
+joe_simplified: AuthorArgs = {"given_name": {"simplified": "Joe"}}
+doe_family_simplified: AuthorArgs = {"family_name": {"simplified": "Doe"}}
+john_doe_simplified: AuthorArgs = {"given_name": {"simplified": "John"}, "family_name": {"simplified": "Doe"}}
+jane_doe_simplified: AuthorArgs = {"given_name": {"simplified": "Jane"}, "family_name": {"simplified": "Doe"}}
+doe_id_simplified: AuthorArgs = {**doe_family_simplified, "id": 3}
+
+# LaTeX name cases
+john_latex: AuthorArgs = {"given_name": {"latex": "John"}}
+jane_latex: AuthorArgs = {"given_name": {"latex": "Jane"}}
+joe_latex: AuthorArgs = {"given_name": {"latex": "Joe"}}
+doe_family_latex: AuthorArgs = {"family_name": {"latex": "Doe"}}
+john_doe_latex: AuthorArgs = {"given_name": {"latex": "John"}, "family_name": {"latex": "Doe"}}
+jane_doe_latex: AuthorArgs = {"given_name": {"latex": "Jane"}, "family_name": {"latex": "Doe"}}
+joe_doe_latex: AuthorArgs = {"given_name": {"latex": "Joe"}, "family_name": {"latex": "Doe"}}
+
+# Parameterized test cases using pytest.param for clarity
+full_name_list_cases: TTestCase[List[AuthorArgs], TBibString, str] = [
+    ([], "simplified", ""),  # 0
+    ([john_simplified], "simplified", "John"),  # 1
+    ([john_simplified, jane_simplified], "simplified", "John and Jane"),  # 2
+    ([john_simplified, jane_simplified, joe_simplified], "simplified", "John and Jane and Joe"),  # 3
+    ([john_doe_simplified, jane_doe_simplified, doe_family_simplified], "simplified", "Doe, John and Doe, Jane"),  # 4
+    (
+        [{**john_doe_simplified, "id": 1}, {**jane_doe_simplified, "id": 2}, doe_id_simplified],
+        "simplified",
+        "Doe, John and Doe, Jane",
+    ),  # 5
+    ([john_latex, jane_latex], "latex", "John and Jane"),  # 6
+    ([john_latex, jane_latex, joe_latex], "latex", "John and Jane and Joe"),  # 7
+    ([john_doe_latex, jane_doe_latex, joe_doe_latex], "latex", "Doe, John and Doe, Jane and Doe, Joe"),  # 8
+]
+
+
+@pytest.mark.parametrize("author_attrs_list, bibstring_type, expected", full_name_list_cases)
+def test_full_name_author_list(author_attrs_list: List[AuthorArgs], bibstring_type: TBibString, expected: str) -> None:
+    authors_list = tuple(default_author(**author_attrs) for author_attrs in author_attrs_list)
+    assert format_author(authors_list, bibstring_type=bibstring_type) == expected
