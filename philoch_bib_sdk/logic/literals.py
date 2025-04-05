@@ -1,7 +1,6 @@
 from typing import Literal
 
 type TBibTeXEntryType = Literal[
-    "",
     "article",
     "book",
     "incollection",
@@ -12,15 +11,20 @@ type TBibTeXEntryType = Literal[
     "proceedings",
     "techreport",
     "unpublished",
+    "UNKNOWN",
+]
+
+type TBasicPubState = Literal[
+    "",
+    "unpub",
+    "forthcoming",
 ]
 
 type TPubState = Literal[
-    "",
-    "unpub",
+    TBasicPubState,
     "inwork",
     "submitted",
     "published",
-    "forthcoming",
 ]
 
 type TLanguageID = Literal[
