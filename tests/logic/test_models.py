@@ -1,9 +1,9 @@
 from itertools import product
-from typing import List
+from typing import Dict, List
 import pytest
 
 from philoch_bib_sdk.logic.literals import TBasicPubState
-from philoch_bib_sdk.logic.models import BibKeyAttr, BibKeyValidationError
+from philoch_bib_sdk.logic.models import BibItemDateAttr, BibItemDateValidationError, BibKeyAttr, BibKeyValidationError
 
 
 first_author_values = ["", "smith"]
@@ -37,3 +37,26 @@ def test_bibkey_validators(case: TBibKeyData) -> None:
 
     with pytest.raises(BibKeyValidationError):
         BibKeyAttr(*case)
+
+
+invalid_date_cases = [
+    # {},
+    {"year": 2023, "month": 10},
+    {"year": 2023, "day": 1},
+    {"year": 2023, "year_part_2_hyphen": 2024, "month": 10},
+    {"year": 2023, "year_part_2_slash": 2024, "month": 10},
+    {"year": 2023, "year_part_2_hyphen": 2024, "day": 1},
+    {"year": 2023, "year_part_2_slash": 2024, "day": 1},
+    {"year": 2023, "year_part_2_hyphen": 2024, "year_part_2_slash": 2025},
+]
+
+
+@pytest.mark.parametrize(
+    "date_data",
+    invalid_date_cases,
+)
+def test_invalid_date_formatter(
+    date_data: Dict[str, int],
+) -> None:
+    with pytest.raises(BibItemDateValidationError):
+        BibItemDateAttr(**date_data)
