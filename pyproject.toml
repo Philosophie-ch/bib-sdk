@@ -26,6 +26,7 @@ mypy = "^1.15.0"
 black = {extras = ["jupyter"], version = "^25.1.0"}
 jupyter = "^1.1.1"
 pytest-env = "^1.1.5"
+autoflake = "^2.3.1"
 
 [tool.mypy]
 python_version = "3.13"
@@ -64,3 +65,5 @@ extend-exclude = '''
 )
 '''
 
+[tool.poetry.scripts]
+format = "scripts.format:main"
