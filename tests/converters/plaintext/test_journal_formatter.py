@@ -1,7 +1,7 @@
 import pytest
 from philoch_bib_sdk.converters.plaintext.journal.formatter import format_journal
 from philoch_bib_sdk.logic.default_models import JournalArgs, default_journal
-from philoch_bib_sdk.logic.models import Journal, BibStringAttr, TBibString
+from philoch_bib_sdk.logic.models import TBibString
 from tests.shared import TTestCase
 
 

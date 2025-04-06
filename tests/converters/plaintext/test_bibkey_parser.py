@@ -1,6 +1,5 @@
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_formatter import format_bibkey
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import parse_bibkey
-from philoch_bib_sdk.logic.models import BibKeyAttr
 
 from aletk.ResultMonad import Ok, Err
 

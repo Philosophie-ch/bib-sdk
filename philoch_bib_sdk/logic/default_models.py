@@ -1,12 +1,10 @@
 from typing import Tuple, TypedDict, Unpack
 
-from philoch_bib_sdk.logic.literals import TBasicPubState
 from philoch_bib_sdk.logic.models import (
     Author,
     BaseNamedRenderable,
     BaseRenderable,
     BibItem,
-    BibKeyAttr,
     BibStringAttr,
     Journal,
 )
@@ -107,10 +105,13 @@ class JournalArgs(TypedDict, total=False):
     id: int | None
 
 
-def default_journal(**kwargs: Unpack[JournalArgs]) -> Journal:
+def default_journal(**kwargs: Unpack[JournalArgs]) -> Journal | None:
     """
     Create a default Journal object, given a dictionary with any (or None) of its attributes. Defaults to empty strings if not provided.
     """
+    if kwargs == {}:
+        return None
+
     return Journal(
         name=default_bib_string(**kwargs.get("name", {})),
         issn_print=kwargs.get("issn_print", ""),
