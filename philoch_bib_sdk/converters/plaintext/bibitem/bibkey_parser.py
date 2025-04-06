@@ -3,7 +3,7 @@ from typing import Tuple
 from aletk.ResultMonad import Ok, Err
 from aletk.utils import get_logger
 from philoch_bib_sdk.logic.literals import TBasicPubState
-from philoch_bib_sdk.logic.models import Author, BibKeyAttr
+from philoch_bib_sdk.logic.models import BibKeyAttr
 
 lgr = get_logger(__name__)
 

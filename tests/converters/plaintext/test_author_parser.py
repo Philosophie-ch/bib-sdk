@@ -1,6 +1,5 @@
 from aletk.ResultMonad import Ok, Err
 from philoch_bib_sdk.converters.plaintext.author.parser import parse_author
-from philoch_bib_sdk.logic.models import Author
 
 
 def test_author_parse() -> None:

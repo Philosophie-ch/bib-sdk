@@ -3,7 +3,7 @@ import pytest
 
 from philoch_bib_sdk.converters.plaintext.author.formatter import _format_single, _full_name_generic, format_author
 from philoch_bib_sdk.logic.default_models import AuthorArgs, default_author
-from philoch_bib_sdk.logic.models import Author, TBibString
+from philoch_bib_sdk.logic.models import TBibString
 from tests.shared import TTestCase
 
 
