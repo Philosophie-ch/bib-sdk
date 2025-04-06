@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Tuple
+from typing import Literal, Tuple, get_args
 import attrs
 
 from philoch_bib_sdk.logic.literals import TBasicPubState, TBibTeXEntryType, TEpoch, TLanguageID, TPubState
@@ -21,11 +21,10 @@ class BibStringAttr:
     simplified: str = ""
 
 
-type TBibString = Literal[
-    "latex",
-    "unicode",
-    "simplified",
-]
+BibStringLiteral = Literal["latex", "unicode", "simplified"]
+
+type TBibString = BibStringLiteral
+BIB_STRING_VALUES: Tuple[str, ...] = get_args(BibStringLiteral)
 
 
 ############
@@ -59,6 +58,12 @@ class BaseNamedRenderable:
 
     name: BibStringAttr
     id: int | None = None
+
+
+RenderablesLiteral = Literal["text", "name"]
+
+type TRenderable = RenderablesLiteral
+RENDERABLES_VALUES: Tuple[str, ...] = get_args(RenderablesLiteral)
 
 
 ############
@@ -175,33 +180,44 @@ class BibItemDateAttr:
     Example:
         BibItemDate(year=2021, year_revised=2022) represents `2021/2022`.
         BibItemDate(year=2021, month=1, day=1) represents `2021-01-01`.
-        BibItemDate(forthcoming=True) represents `forthcoming`.
 
     Args:
         year: int
-        year_part_2_hyphens: int | Literal[""] = ""
+        year_part_2_hyphen: int | Literal[""] = ""
         year_part_2_slash: int | Literal[""] = ""
         month: int | Literal[""] = ""
         day: int | Literal[""] = ""
     """
 
     year: int
-    year_part_2_hyphens: int | Literal[""] = ""
+    year_part_2_hyphen: int | Literal[""] = ""
     year_part_2_slash: int | Literal[""] = ""
     month: int | Literal[""] = ""
     day: int | Literal[""] = ""
 
     def __attrs_post_init__(self) -> None:
-        if any([self.year_part_2_hyphens, self.year_part_2_slash]) and not self.year:
+        if any([self.year_part_2_hyphen, self.year_part_2_slash]) and not self.year:
             raise BibItemDateValidationError(
                 "If 'year_part_2_hyphens' or 'year_part_2_slash' is set, 'year' must not be empty."
             )
 
-        if self.day and not self.month:
-            raise BibItemDateValidationError("If 'day' is set, 'month' must not be empty.")
+        if not ((self.month and self.day) or (not self.month and not self.day)):
+            raise BibItemDateValidationError("If 'day' is set, 'month' must be set too, and vice versa.")
 
         if self.month and not self.year:
             raise BibItemDateValidationError("If 'month' is set, 'year' must not be empty.")
+
+        if self.year_part_2_hyphen and self.year_part_2_slash:
+            raise BibItemDateValidationError("If 'year_part_2_hyphen' is set, 'year_part_2_slash' must not be set.")
+
+
+VALID_DATE_FORMATS = [
+    "{year}",
+    "{year_1}-{year_2}",
+    "{year}/{year_2}",
+    "{year}-{month}-{day}",
+    "{year}-{month}",
+]
 
 
 @attrs.define(frozen=True, slots=True)
@@ -276,7 +292,7 @@ class BibItem:
     number: str
     pages: Tuple[PageAttr, ...]
     eid: str
-    series: BaseNamedRenderable
+    series: BaseNamedRenderable | Literal[""]
     address: BibStringAttr
     institution: BibStringAttr
     school: BibStringAttr
