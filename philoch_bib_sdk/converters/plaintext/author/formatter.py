@@ -27,10 +27,5 @@ def _format_single(author: Author, bibstring_type: TBibString) -> str:
 
 
 def format_author(authors: Tuple[Author, ...], bibstring_type: TBibString) -> str:
-    return " and ".join(
-        [
-            _format_single(author, bibstring_type=bibstring_type)
-            for author in authors
-            if _format_single(author, bibstring_type=bibstring_type)
-        ]
-    )
+    names = (_format_single(author, bibstring_type=bibstring_type) for author in authors)
+    return " and ".join(name for name in names if name)

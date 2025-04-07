@@ -28,6 +28,9 @@ jupyter = "^1.1.1"
 pytest-env = "^1.1.5"
 autoflake = "^2.3.1"
 
+[tool.poetry.group.experimental.dependencies]
+cytoolz = "^1.0.1"
+
 [tool.mypy]
 python_version = "3.13"
 strict = true
@@ -36,9 +39,10 @@ mypy_path = "."
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -s -m 'not external'"
+addopts = "-ra -s -m 'not external and not experimental'"
 markers = [
     "external: mark tests that require external API calls",
+    "experimental: mark tests that are experiments or benchmarks and shouldn't be run all the time",
 ]
 testpaths = ["tests"]
 pythonpath = ["."]
@@ -47,6 +51,7 @@ env = [
 
 [[tool.mypy.overrides]]
 module = [
+    "cytoolz",
 ]
 
 ignore_missing_imports = true
