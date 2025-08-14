@@ -1,6 +1,7 @@
 from aletk.utils import get_logger, fuzzy_match_score, remove_extra_whitespace
 
 from typing import TypedDict
+from philoch_bib_sdk.converters.plaintext.author.formatter import format_author
 from philoch_bib_sdk.logic.models import BibItem, BibItemDateAttr, TBibString
 
 
@@ -107,8 +108,9 @@ def compare_bibitems(reference: BibItem, subject: BibItem, bibstring_type: TBibS
     title_2 = getattr(subject.title, bibstring_type)
     title_score = _score_title(title_1, title_2)
 
-    author_1_full_name = getattr(reference.author, bibstring_type)
-    author_2_full_name = getattr(subject.author, bibstring_type)
+    author_1_full_name = format_author(reference.author, bibstring_type)
+    author_2_full_name = format_author(subject.author, bibstring_type)
+
     author_score = _score_author(author_1_full_name, author_2_full_name)
 
     if isinstance(reference.date, BibItemDateAttr) and isinstance(subject.date, BibItemDateAttr):

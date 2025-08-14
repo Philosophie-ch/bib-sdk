@@ -33,5 +33,5 @@ def format_date(date: BibItemDateAttr | Literal["no date"]) -> str:
 
         case _:
             raise ValueError(
-                f"Invalid date format. Expected oue of {', '.join(VALID_DATE_FORMATS)}, but found '{date}'."
+                f"Invalid date format. Expected one of {', '.join(VALID_DATE_FORMATS)}, but found '{date}'."
             )
