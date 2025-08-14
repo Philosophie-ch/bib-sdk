@@ -21,21 +21,23 @@ def _parse_date(text: str) -> BibItemDateAttr | Literal["no date"]:
 
     # Handle the number of parts (could be year, year-year2, year/year_2, year-month-day)
     if len(parts) == 1:
-        return BibItemDateAttr(year=int(parts[0]), year_part_2_hyphen="", year_part_2_slash="", month="", day="")
+        return BibItemDateAttr(
+            year=int(parts[0]), year_part_2_hyphen=None, year_part_2_slash=None, month=None, day=None
+        )
 
     elif len(parts) == 2 and "-" in text:
         return BibItemDateAttr(
-            year=int(parts[0]), year_part_2_hyphen=int(parts[1]), year_part_2_slash="", month="", day=""
+            year=int(parts[0]), year_part_2_hyphen=int(parts[1]), year_part_2_slash=None, month=None, day=None
         )
 
     elif len(parts) == 2 and "/" in text:
         return BibItemDateAttr(
-            year=int(parts[0]), year_part_2_hyphen="", year_part_2_slash=int(parts[1]), month="", day=""
+            year=int(parts[0]), year_part_2_hyphen=None, year_part_2_slash=int(parts[1]), month=None, day=None
         )
 
     elif len(parts) == 3 and "-" in text and len(parts[1]) <= 2 and len(parts[2]) <= 2:
         return BibItemDateAttr(
-            year=int(parts[0]), year_part_2_hyphen="", year_part_2_slash="", month=int(parts[1]), day=int(parts[2])
+            year=int(parts[0]), year_part_2_hyphen=None, year_part_2_slash=None, month=int(parts[1]), day=int(parts[2])
         )
 
     else:

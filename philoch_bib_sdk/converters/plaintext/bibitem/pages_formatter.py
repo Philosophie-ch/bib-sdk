@@ -7,6 +7,7 @@ def _pages_single_str(page_pair: PageAttr) -> str:
 
 
 def format_pages(pages: Tuple[PageAttr, ...]) -> str:
-    if pages is ():
+    if pages is tuple():
         return ""
+
     return ", ".join((_pages_single_str(page_pair) for page_pair in pages))

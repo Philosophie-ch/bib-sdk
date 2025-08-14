@@ -1,7 +1,10 @@
-from philoch_bib_sdk.logic.models import BibKeyAttr
+from philoch_bib_sdk.logic.models import BibKeyAttr, MaybeStr
 
 
-def format_bibkey(bibkey: BibKeyAttr) -> str:
+def format_bibkey(bibkey: MaybeStr[BibKeyAttr]) -> str:
+
+    if bibkey == "":
+        return ""
 
     if bibkey.other_authors:
         authors_l = [bibkey.first_author, bibkey.other_authors]
