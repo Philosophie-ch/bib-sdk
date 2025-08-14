@@ -1,11 +1,11 @@
 import pytest
 from philoch_bib_sdk.converters.plaintext.journal.formatter import format_journal
 from philoch_bib_sdk.logic.default_models import JournalArgs, default_journal
-from philoch_bib_sdk.logic.models import TBibString
+from philoch_bib_sdk.logic.models import MaybeStr, TBibString
 from tests.shared import TTestCase
 
 
-journal_cases: TTestCase[JournalArgs, TBibString, str] = [
+journal_cases: TTestCase[MaybeStr[JournalArgs], TBibString, str] = [
     # simplified cases
     ({}, "simplified", ""),
     ({"name": {"simplified": "Journal of Testing"}}, "simplified", "Journal of Testing"),

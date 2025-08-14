@@ -1,15 +1,25 @@
 from aletk.utils import get_logger
-from philoch_bib_sdk.logic.models import Journal, TBibString
+from philoch_bib_sdk.logic.models import Journal, Maybe, TBibString
 
 lgr = get_logger(__name__)
 
 
-def format_journal(journal: Journal | None, bibstring_type: TBibString) -> str:
+def format_journal(journal: Maybe[Journal], bibstring_type: TBibString) -> str:
     """
     Format a journal object into a string representation.
     """
-    if journal is None:
-        return ""
 
-    journal_name = f"{getattr(journal.name, bibstring_type)}"
-    return journal_name
+    match journal:
+
+        case None:
+            return ""
+
+        case Journal(name, id):
+
+            if not name:
+                return ""
+
+            return f"{getattr(name, bibstring_type)}"
+
+        case _:
+            raise TypeError(f"Invalid type for journal: {type(journal)}. Dump: {journal!r}")

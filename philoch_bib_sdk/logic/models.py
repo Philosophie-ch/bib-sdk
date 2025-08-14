@@ -5,6 +5,10 @@ import attrs
 from philoch_bib_sdk.logic.literals import TBasicPubState, TBibTeXEntryType, TEpoch, TLanguageID, TPubState
 
 
+type Maybe[T] = T | None
+type MaybeStr[T] = T | Literal[""]
+
+
 @attrs.define(frozen=True, slots=True)
 class BibStringAttr:
     """
@@ -39,11 +43,11 @@ class BaseRenderable:
 
     Args:
         text: BibString
-        id: int | None = None
+        id: Maybe[int] = None
     """
 
     text: BibStringAttr
-    id: int | None = None
+    id: Maybe[int] = None
 
 
 @attrs.define(frozen=True, slots=True)
@@ -53,11 +57,11 @@ class BaseNamedRenderable:
 
     Args:
         name: BibString
-        id: int | None = None
+        id: Maybe[int] = None
     """
 
     name: BibStringAttr
-    id: int | None = None
+    id: Maybe[int] = None
 
 
 RenderablesLiteral = Literal["text", "name"]
@@ -82,7 +86,7 @@ class Author:
         given_name_latex: BibStringAttr
         family_name_latex: BibStringAttr
         publications: Tuple[BibItem] = []
-        id: int | None = None
+        id: Maybe[int] = None
     """
 
     given_name: BibStringAttr
@@ -91,7 +95,7 @@ class Author:
     shorthand: BibStringAttr
     famous_name: BibStringAttr
     publications: Tuple[BibItem, ...]
-    id: int | None = None
+    id: Maybe[int] = None
 
 
 ############
@@ -109,13 +113,13 @@ class Journal:
         name_latex: str
         issn_print: str
         issn_electronic: str
-        id: int | None = None
+        id: Maybe[int] = None
     """
 
     name: BibStringAttr
     issn_print: str
     issn_electronic: str
-    id: int | None = None
+    id: Maybe[int] = None
 
 
 ############
@@ -130,11 +134,11 @@ class Keyword:
 
     Args:
         name: str
-        id: int | None = None
+        id: Maybe[int] = None
     """
 
     name: str
-    id: int | None = None
+    id: Maybe[int] = None
 
 
 ############
@@ -183,17 +187,17 @@ class BibItemDateAttr:
 
     Args:
         year: int
-        year_part_2_hyphen: int | Literal[""] = ""
-        year_part_2_slash: int | Literal[""] = ""
-        month: int | Literal[""] = ""
-        day: int | Literal[""] = ""
+        year_part_2_hyphen: Maybe[int] = None
+        year_part_2_slash: Maybe[int] = None
+        month: Maybe[int] = None
+        day: Maybe[int] = None
     """
 
     year: int
-    year_part_2_hyphen: int | Literal[""] = ""
-    year_part_2_slash: int | Literal[""] = ""
-    month: int | Literal[""] = ""
-    day: int | Literal[""] = ""
+    year_part_2_hyphen: Maybe[int] = None
+    year_part_2_slash: Maybe[int] = None
+    month: Maybe[int] = None
+    day: Maybe[int] = None
 
     def __attrs_post_init__(self) -> None:
         if any([self.year_part_2_hyphen, self.year_part_2_slash]) and not self.year:
@@ -272,65 +276,65 @@ class BibItem:
     """
 
     # Normal string fields
-    _to_do: str
+    _to_do_general: str
     _change_request: str
 
     # Official fields, may be stored in different formats
     entry_type: TBibTeXEntryType
-    bibkey: BibKeyAttr | Literal[""]
+    bibkey: MaybeStr[BibKeyAttr]
     author: Tuple[Author, ...]
     editor: Tuple[Author, ...]
     options: Tuple[str, ...]
     # shorthand: BibStringAttr  # Mononym of the author
     date: BibItemDateAttr | Literal["no date"]
     pubstate: TPubState
-    title: BibStringAttr
-    booktitle: BibStringAttr
-    crossref: CrossrefBibItemAttr | Literal[""]
-    journal: Journal | Literal[""]
+    title: MaybeStr[BibStringAttr]
+    booktitle: MaybeStr[BibStringAttr]
+    crossref: MaybeStr[CrossrefBibItemAttr]
+    journal: Maybe[Journal]
     volume: str
     number: str
     pages: Tuple[PageAttr, ...]
     eid: str
-    series: BaseNamedRenderable | Literal[""]
-    address: BibStringAttr
-    institution: BibStringAttr
-    school: BibStringAttr
-    publisher: BibStringAttr
-    type: BibStringAttr
-    edition: int | Literal[""]
-    note: BibStringAttr
-    issuetitle: BibStringAttr
-    guesteditor: Tuple[Author, ...]  # Custom field
-    further_note: BibStringAttr  # Custom field
+    series: MaybeStr[BaseNamedRenderable]
+    address: MaybeStr[BibStringAttr]
+    institution: MaybeStr[BibStringAttr]
+    school: MaybeStr[BibStringAttr]
+    publisher: MaybeStr[BibStringAttr]
+    type: MaybeStr[BibStringAttr]
+    edition: Maybe[int]
+    note: MaybeStr[BibStringAttr]
+    issuetitle: MaybeStr[BibStringAttr]
+    _guesteditor: Tuple[Author, ...]  # Custom field
+    _extra_note: MaybeStr[BibStringAttr]  # Custom field
     urn: str
     eprint: str
     doi: str
     url: str
 
     # String fields
-    _kws: KeywordsAttr
+    _kws: MaybeStr[KeywordsAttr]
     _epoch: TEpoch
-    _person: Author
+    _person: MaybeStr[Author]
     _comm_for_profile_bib: str
-    langid: TLanguageID
-    _lang_det: str
+    _langid: TLanguageID
+    _lang_der: str
     _further_refs: Tuple[BibKeyAttr, ...]
     _depends_on: Tuple[BibKeyAttr, ...]
-    dltc_num: int
+    _dltc_num: Maybe[int]
     _spec_interest: str
     _note_perso: str
     _note_stock: str
     _note_status: str
-    _num_in_work: str
-    _num_in_work_coll: int | Literal[""]
-    _num_coll: int | Literal[""]
+    _num_inwork_coll: Maybe[int]
+    _num_inwork: str
+    _num_coll: Maybe[int]
     _dltc_copyediting_note: str
     _note_missing: str
-    _num_sort: int | Literal[""]
+    _num_sort: Maybe[int]
 
     # Additional fields
-    id: int | None = None
+    id: Maybe[int] = None
     _bib_info_source: str = ""
 
     def __attrs_post_init__(self) -> None:

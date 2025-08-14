@@ -1,10 +1,11 @@
+from typing import Tuple
 from philoch_bib_sdk.converters.plaintext.bibitem.pages_formatter import format_pages
 from philoch_bib_sdk.logic.models import PageAttr
 
 
 def test_pages_formatter() -> None:
 
-    pages_empty = ()
+    pages_empty: Tuple[PageAttr, ...] = tuple()
     assert format_pages(pages_empty) == ""
 
     pages_1 = PageAttr(start="1", end="2")
