@@ -1,4 +1,3 @@
-import pytest
 from philoch_bib_sdk.converters.plaintext.bibitem.formatter import format_bibitem
 from philoch_bib_sdk.logic.models import BibItem, BibKeyAttr, BibStringAttr, Author, BibItemDateAttr
 

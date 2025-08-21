@@ -19,6 +19,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 aletk = "^0.1.6"
 attrs = "^25.3.0"
+polars = "^1.32.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
@@ -27,6 +28,8 @@ black = {extras = ["jupyter"], version = "^25.1.0"}
 jupyter = "^1.1.1"
 pytest-env = "^1.1.5"
 autoflake = "^2.3.1"
+odswriter = "^0.4.0"
+fastexcel = "^0.14.0"
 
 [tool.poetry.group.experimental.dependencies]
 cytoolz = "^1.0.1"
@@ -52,6 +55,7 @@ env = [
 [[tool.mypy.overrides]]
 module = [
     "cytoolz",
+    "odswriter",
 ]
 ignore_missing_imports = true
 
