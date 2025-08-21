@@ -3,10 +3,7 @@ from philoch_bib_sdk.logic.default_models import default_author, AuthorArgs
 
 
 def test_slotted_classes_are_slotted() -> None:
-    data: AuthorArgs = {
-        "given_name": {"latex": "John"},
-        "family_name": {"latex": "Doe"}
-    }
+    data: AuthorArgs = {"given_name": {"latex": "John"}, "family_name": {"latex": "Doe"}}
     author = default_author(**data)
     assert "__dict__" not in author.__slots__
 
@@ -18,10 +15,7 @@ def test_slotted_classes_are_slotted() -> None:
 
 
 def test_frozen_classes_are_frozen() -> None:
-    data: AuthorArgs = {
-        "given_name": {"latex": "John"},
-        "family_name": {"latex": "Doe"}
-    }
+    data: AuthorArgs = {"given_name": {"latex": "John"}, "family_name": {"latex": "Doe"}}
     author = default_author(**data)
     try:
         author.given_name = "Jane"  # type: ignore
