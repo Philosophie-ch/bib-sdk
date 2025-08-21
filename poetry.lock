@@ -753,7 +753,7 @@ version = "0.14.0"
 description = "A fast excel file reader for Python, written in Rust"
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "fastexcel-0.14.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:8cf9fdff9df918cc2dfad66932cd238b6e1e5e1b7b0a079df713a35d2af1586e"},
     {file = "fastexcel-0.14.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:0764cb1232e5feb4a7953ee53e60a46f330fa32ef012d813fa491173c7578d3b"},
@@ -1849,7 +1849,7 @@ version = "0.4.0"
 description = "A pure-Python module for writing OpenDocument spreadsheets (similar to csv.writer)."
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "odswriter-0.4.0.tar.gz", hash = "sha256:f4c6195dc95cc4a7c2bd98a8e174ddfb9eb98b0329ffe9a740ee825a319d62a0"},
 ]
@@ -2087,7 +2087,7 @@ version = "21.0.0"
 description = "Python library for Apache Arrow"
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "pyarrow-21.0.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:e563271e2c5ff4d4a4cbeb2c83d5cf0d4938b891518e676025f7268c6fe5fe26"},
     {file = "pyarrow-21.0.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:fee33b0ca46f4c85443d6c450357101e47d53e6c3f008d658c27a2d020d44c79"},
@@ -3155,4 +3155,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13"
-content-hash = "f773ab297232518ba0fe1bcbbb2d7d0ee9e5d25712847f15ab1470d3631751eb"
+content-hash = "07ff6a3ddc06d279b6836215496b987962224c25e9fb69039a95ab5e01489df5"
