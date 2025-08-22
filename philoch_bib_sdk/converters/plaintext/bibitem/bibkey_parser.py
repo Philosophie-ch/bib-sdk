@@ -142,3 +142,17 @@ def parse_bibkey(text: str) -> Ok[BibKeyAttr] | Err:
             error_type="BibkeyError",
             error_trace=f"{traceback.format_exc()}",
         )
+
+
+def hard_parse_bibkey(text: str) -> BibKeyAttr:
+    """
+    Hard parse a bibkey, without any error handling.
+    This is used for testing purposes only.
+    """
+
+    bibkey_parsed = parse_bibkey(text)
+
+    if isinstance(bibkey_parsed, Err):
+        raise ValueError(f"Could not hard parse '{text}' as bibkey: {bibkey_parsed.message}")
+
+    return bibkey_parsed.out

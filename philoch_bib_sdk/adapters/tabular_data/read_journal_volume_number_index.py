@@ -1,21 +1,20 @@
 from functools import partial
 from typing import Callable, NamedTuple
 
+from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import hard_parse_bibkey, parse_bibkey
 from philoch_bib_sdk.logic.functions.journal_article_matcher import (
-    TBibkey,
     TJournalBibkeyIndex,
-    TJournalName,
-    TNumber,
     TReadIndex,
-    TVolume,
 )
+
+from aletk.ResultMonad import Err
 
 
 class ColumnNames(NamedTuple):
-    bibkey: TBibkey
-    journal: TJournalName
-    volume: TVolume
-    number: TNumber
+    bibkey: str
+    journal: str
+    volume: str
+    number: str
 
 
 def _read_from_ods(
@@ -49,8 +48,19 @@ def _read_from_ods(
             f"Tabular data at '{file_path}' is empty or does not contain the expected columns: {column_names}"
         )
 
+    bibkeys_parsed = (parse_bibkey(str(row[column_names.bibkey])) for row in df.to_dicts())
+
+    bibkey_errors = [bibkey for bibkey in bibkeys_parsed if isinstance(bibkey, Err)]
+
+    if bibkey_errors != []:
+        raise ValueError(
+            f"Failed to parse bibkeys in the ODS file at '{file_path}': {' --- '.join(str(bibkey_errors))}"
+        )
+
     return {
-        (row[column_names.journal], row[column_names.volume], row[column_names.number]): row[column_names.bibkey]
+        (row[column_names.journal], row[column_names.volume], row[column_names.number]): hard_parse_bibkey(
+            row[column_names.bibkey]
+        )
         for row in df.to_dicts()
     }
 

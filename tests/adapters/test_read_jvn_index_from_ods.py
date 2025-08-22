@@ -2,7 +2,9 @@ from typing import Generator
 import pytest
 import odswriter as ods
 from philoch_bib_sdk.adapters.tabular_data.read_journal_volume_number_index import ColumnNames, hof_read_from_ods
+from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import parse_bibkey
 from philoch_bib_sdk.logic.functions.journal_article_matcher import TReadIndex
+from aletk.ResultMonad import Ok
 
 
 @pytest.fixture
@@ -19,6 +21,11 @@ def get_test_jvn_index(column_names: ColumnNames) -> TReadIndex:
     return hof_read_from_ods(column_names)
 
 
+bibkeys_s = ["abell_c:2005a", "abell_c:2007", "abell_c:2009"]
+bibkeys_parsed = [parse_bibkey(bibkey) for bibkey in bibkeys_s]
+bibkeys = [bibkey.out for bibkey in bibkeys_parsed if isinstance(bibkey, Ok)]
+
+
 @pytest.fixture
 def write_test_tmp_ods() -> Generator[str, None, None]:
     """
@@ -31,9 +38,9 @@ def write_test_tmp_ods() -> Generator[str, None, None]:
 
     rows = [
         ["bibkey", "journal", "volume", "number"],
-        ["bibkey1", "Journal of Testing", "1", "1"],
-        ["bibkey2", "Journal of Testing", "1", "2"],
-        ["bibkey3", "Journal of Testing", "2", "1"],
+        [bibkeys_s[0], "Journal of Testing", "1", "1"],
+        [bibkeys_s[1], "Journal of Testing", "1", "2"],
+        [bibkeys_s[2], "Journal of Testing", "2", "1"],
     ]
 
     with ods.writer(open(tmp_file.name, "wb")) as odsfile:
@@ -79,9 +86,9 @@ def test_read_jvn_index_from_ods(
     assert isinstance(index, dict)
     assert len(index) == 3
     assert ("Journal of Testing", "1", "1") in index
-    assert index[("Journal of Testing", "1", "1")] == "bibkey1"
-    assert index[("Journal of Testing", "1", "2")] == "bibkey2"
-    assert index[("Journal of Testing", "2", "1")] == "bibkey3"
+    assert index[("Journal of Testing", "1", "1")] == bibkeys[0]
+    assert index[("Journal of Testing", "1", "2")] == bibkeys[1]
+    assert index[("Journal of Testing", "2", "1")] == bibkeys[2]
 
 
 def test_read_empty_jvn_index_from_ods(
