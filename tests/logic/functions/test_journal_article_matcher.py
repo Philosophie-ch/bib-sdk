@@ -1,10 +1,18 @@
 import pytest
+from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import parse_bibkey
 from philoch_bib_sdk.logic.default_models import BibItemArgs, default_bib_item
 from philoch_bib_sdk.logic.functions.journal_article_matcher import (
     TJournalBibkeyIndex,
     get_bibkey_by_journal_volume_number,
 )
+from philoch_bib_sdk.logic.models import BibKeyAttr
 from tests.shared import TTestCase
+from aletk.ResultMonad import Ok
+
+
+bibkeys_s = ["abell_c:2005a", "abell_c:2007", "abell_c:2009"]
+bibkeys_parsed = [parse_bibkey(bibkey) for bibkey in bibkeys_s]
+bibkeys = [bibkey.out for bibkey in bibkeys_parsed if isinstance(bibkey, Ok)]
 
 
 @pytest.fixture
@@ -13,11 +21,13 @@ def jvn_index() -> TJournalBibkeyIndex:
     Returns a function that reads a journal volume number index from an ODS file, given the column names.
     """
 
-    return {
-        ("Journal of Testing", "1", "1"): "bibkey1",
-        ("Journal of Testing", "1", "2"): "bibkey2",
-        ("Journal of Testing", "2", "1"): "bibkey3",
-    }
+    jvns = [
+        ("Journal of Testing", "1", "1"),
+        ("Journal of Testing", "1", "2"),
+        ("Journal of Testing", "2", "1"),
+    ]
+
+    return {(journal, volume, number): bibkey for (journal, volume, number), bibkey in zip(jvns, bibkeys)}
 
 
 @pytest.fixture
@@ -29,10 +39,10 @@ def empty_jvn_index() -> TJournalBibkeyIndex:
 
 
 var_names = ("bibitem_data", "expected_bibkey")
-bibitems: TTestCase[BibItemArgs, str] = [
-    ({"journal": {"name": {"latex": "Journal of Testing"}}, "volume": "1", "number": "1"}, "bibkey1"),
-    ({"journal": {"name": {"latex": "Journal of Testing"}}, "volume": "1", "number": "2"}, "bibkey2"),
-    ({"journal": {"name": {"latex": "Journal of Testing"}}, "volume": "2", "number": "1"}, "bibkey3"),
+bibitems: TTestCase[BibItemArgs, BibKeyAttr] = [
+    ({"journal": {"name": {"latex": "Journal of Testing"}}, "volume": "1", "number": "1"}, bibkeys[0]),
+    ({"journal": {"name": {"latex": "Journal of Testing"}}, "volume": "1", "number": "2"}, bibkeys[1]),
+    ({"journal": {"name": {"latex": "Journal of Testing"}}, "volume": "2", "number": "1"}, bibkeys[2]),
 ]
 
 
@@ -43,7 +53,7 @@ bibitems: TTestCase[BibItemArgs, str] = [
 def test_get_bibkey_by_journal_volume_number(
     jvn_index: TJournalBibkeyIndex,
     bibitem_data: BibItemArgs,
-    expected_bibkey: str,
+    expected_bibkey: BibKeyAttr,
 ) -> None:
     """
     Tests the get_bibkey_by_journal_volume_number function with various journal volume number combinations.
@@ -61,7 +71,7 @@ def test_get_bibkey_by_journal_volume_number(
 def test_get_bibkey_by_journal_volume_number_empty_index(
     empty_jvn_index: TJournalBibkeyIndex,
     bibitem_data: BibItemArgs,
-    expected_bibkey: str,
+    expected_bibkey: BibKeyAttr,
 ) -> None:
     """
     Tests the get_bibkey_by_journal_volume_number function with an empty index.
