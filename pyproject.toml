@@ -20,6 +20,7 @@ build-backend = "poetry.core.masonry.api"
 aletk = "^0.1.6"
 attrs = "^25.3.0"
 polars = "^1.32.3"
+pydantic = "^2.11.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
