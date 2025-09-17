@@ -48,15 +48,6 @@ def _read_from_ods(
             f"Tabular data at '{file_path}' is empty or does not contain the expected columns: {column_names}"
         )
 
-    bibkeys_parsed = (parse_bibkey(str(row[column_names.bibkey])) for row in df.to_dicts())
-
-    bibkey_errors = [bibkey for bibkey in bibkeys_parsed if isinstance(bibkey, Err)]
-
-    if bibkey_errors != []:
-        raise ValueError(
-            f"Failed to parse bibkeys in the ODS file at '{file_path}': {' --- '.join(str(bibkey_errors))}"
-        )
-
     return {
         (row[column_names.journal], row[column_names.volume], row[column_names.number]): hard_parse_bibkey(
             row[column_names.bibkey]
