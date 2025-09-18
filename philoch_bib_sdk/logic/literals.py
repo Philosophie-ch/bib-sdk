@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Literal, Tuple, get_args
 
-type TBibTeXEntryType = Literal[
+TBibTeXEntryType = Literal[
     "article",
     "book",
     "incollection",
@@ -14,20 +14,22 @@ type TBibTeXEntryType = Literal[
     "UNKNOWN",
 ]
 
-type TBasicPubState = Literal[
+TBasicPubState = Literal[
     "",
     "unpub",
     "forthcoming",
 ]
 
-type TPubState = Literal[
-    TBasicPubState,
+TPubState = Literal[
+    "",
+    "unpub",
+    "forthcoming",
     "inwork",
     "submitted",
     "published",
 ]
 
-type TLanguageID = Literal[
+TLanguageID = Literal[
     "",
     "catalan",
     "czech",
@@ -50,7 +52,7 @@ type TLanguageID = Literal[
     "unknown",
 ]
 
-type TEpoch = Literal[
+TEpoch = Literal[
     "",
     "ancient-philosophy",
     "ancient-scientists",
@@ -88,3 +90,9 @@ type TEpoch = Literal[
     "theologians",
     "vienna-circle",
 ]
+
+# Literal value constants for runtime validation
+BIBTEX_ENTRY_TYPE_VALUES: Tuple[TBibTeXEntryType, ...] = get_args(TBibTeXEntryType)
+PUB_STATE_VALUES: Tuple[TPubState, ...] = get_args(TPubState)
+EPOCH_VALUES: Tuple[TEpoch, ...] = get_args(TEpoch)
+LANGUAGE_ID_VALUES: Tuple[TLanguageID, ...] = get_args(TLanguageID)
