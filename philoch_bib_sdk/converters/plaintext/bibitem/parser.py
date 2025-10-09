@@ -103,25 +103,22 @@ def _is_valid_bibtex_entry_type(value: Any) -> TypeGuard[TBibTeXEntryType]:
     return isinstance(value, str) and value in BIBTEX_ENTRY_TYPE_VALUES
 
 
-def _parse_entry_type(text: str) -> TBibTeXEntryType:
+def parse_entry_type(text: str) -> TBibTeXEntryType:
     """
     Parse the entry type from a string.
     """
     if text == "" or text == "UNKNOWN":
         return "UNKNOWN"
 
-    if text.startswith("@"):
-        entry_type_str = text[1:]
-    else:
-        entry_type_str = text
+    clean = text.strip().replace(" ", "").lower().replace("@", "").replace("{", "").replace("}", "")
 
-    if _is_valid_bibtex_entry_type(entry_type_str):
-        return entry_type_str
+    if _is_valid_bibtex_entry_type(clean):
+        return clean
     else:
         return "UNKNOWN"
 
 
-def _parse_options(text: str) -> Tuple[str, ...]:
+def parse_options(text: str) -> Tuple[str, ...]:
     """
     Parse a comma-separated list of options.
     """
@@ -130,7 +127,7 @@ def _parse_options(text: str) -> Tuple[str, ...]:
     return tuple(remove_extra_whitespace(opt) for opt in text.split(",") if opt.strip())
 
 
-def _parse_bibkey_list(text: str) -> Tuple[BibKeyAttr, ...]:
+def parse_bibkey_list(text: str) -> Tuple[BibKeyAttr, ...]:
     """
     Parse a comma-separated list of bibkeys.
     """
@@ -150,7 +147,14 @@ def _parse_bibkey_list(text: str) -> Tuple[BibKeyAttr, ...]:
     return tuple(bibkeys)
 
 
-def _parse_keywords(level1: str, level2: str, level3: str) -> KeywordsAttr | None:
+def _clean_keyword(text: str) -> str:
+    """
+    Clean a keyword string by stripping whitespace and removing unwanted characters.
+    """
+    return remove_extra_whitespace(text).replace(",", "").replace(";", "")
+
+
+def parse_keywords(level1: str, level2: str, level3: str) -> KeywordsAttr | None:
     """
     Parse keywords from three level strings.
     """
@@ -158,9 +162,9 @@ def _parse_keywords(level1: str, level2: str, level3: str) -> KeywordsAttr | Non
         return None
 
     return KeywordsAttr(
-        level_1=Keyword(name=level1, id=None) if level1 else Keyword(name="", id=None),
-        level_2=Keyword(name=level2, id=None) if level2 else Keyword(name="", id=None),
-        level_3=Keyword(name=level3, id=None) if level3 else Keyword(name="", id=None),
+        level_1=Keyword(name=_clean_keyword(level1), id=None) if level1 else Keyword(name="", id=None),
+        level_2=Keyword(name=_clean_keyword(level2), id=None) if level2 else Keyword(name="", id=None),
+        level_3=Keyword(name=_clean_keyword(level3), id=None) if level3 else Keyword(name="", id=None),
     )
 
 
@@ -171,7 +175,7 @@ def _is_valid_pubstate(value: Any) -> TypeGuard[TPubState]:
     return isinstance(value, str) and value in PUB_STATE_VALUES
 
 
-def _parse_pubstate(text: str) -> TPubState:
+def parse_pubstate(text: str) -> TPubState:
     """
     Parse publication state from a string.
     """
@@ -188,7 +192,7 @@ def _is_valid_epoch(value: Any) -> TypeGuard[TEpoch]:
     return isinstance(value, str) and value in EPOCH_VALUES
 
 
-def _parse_epoch(text: str) -> TEpoch:
+def parse_epoch(text: str) -> TEpoch:
     """
     Parse epoch from a string.
     """
@@ -205,7 +209,7 @@ def _is_valid_language_id(value: Any) -> TypeGuard[TLanguageID]:
     return isinstance(value, str) and value in LANGUAGE_ID_VALUES
 
 
-def _parse_language_id(text: str) -> TLanguageID:
+def parse_language_id(text: str) -> TLanguageID:
     """
     Parse language ID from a string.
     """
@@ -301,11 +305,11 @@ def parse_bibitem(data: ParsedBibItemData, bibstring_type: TBibString = "latex")
         # TODO: Implement proper crossref parsing if needed
 
         # Parse further_refs and depends_on
-        further_refs = _parse_bibkey_list(data.get("_further_refs", ""))
-        depends_on = _parse_bibkey_list(data.get("_depends_on", ""))
+        further_refs = parse_bibkey_list(data.get("_further_refs", ""))
+        depends_on = parse_bibkey_list(data.get("_depends_on", ""))
 
         # Parse keywords
-        keywords = _parse_keywords(data.get("_kw_level1", ""), data.get("_kw_level2", ""), data.get("_kw_level3", ""))
+        keywords = parse_keywords(data.get("_kw_level1", ""), data.get("_kw_level2", ""), data.get("_kw_level3", ""))
 
         # Parse edition
         edition = None
@@ -349,13 +353,13 @@ def parse_bibitem(data: ParsedBibItemData, bibstring_type: TBibString = "latex")
         bibitem = BibItem(
             to_do_general=data.get("_to_do_general", ""),
             change_request=data.get("_change_request", ""),
-            entry_type=_parse_entry_type(data.get("entry_type", "")),
+            entry_type=parse_entry_type(data.get("entry_type", "")),
             bibkey=bibkey or "",
             author=authors,
             editor=editors,
-            options=_parse_options(data.get("options", "")),
+            options=parse_options(data.get("options", "")),
             date=date,
-            pubstate=_parse_pubstate(data.get("pubstate", "")),
+            pubstate=parse_pubstate(data.get("pubstate", "")),
             title=_create_bibstring_attr(data["title"], bibstring_type) if data.get("title") else "",
             booktitle=_create_bibstring_attr(data["booktitle"], bibstring_type) if data.get("booktitle") else "",
             crossref="",
@@ -380,10 +384,10 @@ def parse_bibitem(data: ParsedBibItemData, bibstring_type: TBibString = "latex")
             doi=data.get("doi", ""),
             url=data.get("url", ""),
             kws=keywords or "",
-            epoch=_parse_epoch(data.get("_epoch", "")),
+            epoch=parse_epoch(data.get("_epoch", "")),
             person=person or "",
             comm_for_profile_bib=data.get("_comm_for_profile_bib", ""),
-            langid=_parse_language_id(data.get("_langid", "")),
+            langid=parse_language_id(data.get("_langid", "")),
             lang_der=data.get("_lang_der", ""),
             further_refs=further_refs,
             depends_on=depends_on,
