@@ -1,4 +1,3 @@
-import pytest
 from typing import TypeGuard, Any
 from aletk.ResultMonad import Ok, Err
 from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem, ParsedBibItemData
@@ -10,11 +9,9 @@ from philoch_bib_sdk.logic.models import (
     BibStringAttr,
     TBibString,
     BIB_STRING_VALUES,
-    PageAttr,
     BibItemDateAttr,
     BaseNamedRenderable,
     KeywordsAttr,
-    Keyword,
 )
 
 

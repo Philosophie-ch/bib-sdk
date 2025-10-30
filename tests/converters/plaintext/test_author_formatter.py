@@ -10,8 +10,8 @@ from tests.shared import TTestCase
 @pytest.mark.parametrize(
     "given_name, family_name, mononym, expected",
     [
-        # If given_name is "", return ""
-        ("", "Doe", "", ""),
+        # If given_name is "" but family_name exists, return family_name
+        ("", "Doe", "", "Doe"),
         # If family_name is "", return given_name
         ("John", "", "", "John"),
         # If both are "", return ""
@@ -30,12 +30,12 @@ full_name_cases: TTestCase[AuthorArgs, TBibString, str] = [
     # simplified cases
     ({}, "simplified", ""),
     ({"given_name": {"simplified": "John"}}, "simplified", "John"),
-    ({"family_name": {"simplified": "Doe"}}, "simplified", ""),
+    ({"family_name": {"simplified": "Doe"}}, "simplified", "Doe"),
     ({"given_name": {"simplified": "John"}, "family_name": {"simplified": "Doe"}}, "simplified", "Doe, John"),
     # Latex cases
     ({}, "simplified", ""),
     ({"given_name": {"latex": "John"}}, "latex", "John"),
-    ({"family_name": {"latex": "Doe"}}, "latex", ""),
+    ({"family_name": {"latex": "Doe"}}, "latex", "Doe"),
     ({"given_name": {"latex": "John"}, "family_name": {"latex": "Doe"}}, "latex", "Doe, John"),
 ]
 
@@ -73,11 +73,15 @@ full_name_list_cases: TTestCase[List[AuthorArgs], TBibString, str] = [
     ([john_simplified], "simplified", "John"),  # 1
     ([john_simplified, jane_simplified], "simplified", "John and Jane"),  # 2
     ([john_simplified, jane_simplified, joe_simplified], "simplified", "John and Jane and Joe"),  # 3
-    ([john_doe_simplified, jane_doe_simplified, doe_family_simplified], "simplified", "Doe, John and Doe, Jane"),  # 4
+    (
+        [john_doe_simplified, jane_doe_simplified, doe_family_simplified],
+        "simplified",
+        "Doe, John and Doe, Jane and Doe",
+    ),  # 4
     (
         [{**john_doe_simplified, "id": 1}, {**jane_doe_simplified, "id": 2}, doe_id_simplified],
         "simplified",
-        "Doe, John and Doe, Jane",
+        "Doe, John and Doe, Jane and Doe",
     ),  # 5
     ([john_latex, jane_latex], "latex", "John and Jane"),  # 6
     ([john_latex, jane_latex, joe_latex], "latex", "John and Jane and Joe"),  # 7

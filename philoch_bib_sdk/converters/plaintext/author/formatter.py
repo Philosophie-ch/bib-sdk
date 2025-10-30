@@ -9,6 +9,9 @@ def _full_name_generic(given_name: str, family_name: str, mononym: str) -> str:
     if mononym:
         return mononym
 
+    if not given_name and family_name:
+        return family_name
+
     if not given_name:
         return ""
 

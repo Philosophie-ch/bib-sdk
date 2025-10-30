@@ -1,13 +1,11 @@
 from functools import partial
 from typing import Callable, NamedTuple
 
-from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import hard_parse_bibkey, parse_bibkey
+from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import hard_parse_bibkey
 from philoch_bib_sdk.logic.functions.journal_article_matcher import (
     TJournalBibkeyIndex,
     TReadIndex,
 )
-
-from aletk.ResultMonad import Err
 
 
 class ColumnNames(NamedTuple):
