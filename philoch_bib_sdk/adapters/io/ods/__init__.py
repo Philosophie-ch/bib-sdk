@@ -107,9 +107,7 @@ def load_bibliography_ods(
 
         if not bibliography:
             error_summary = "\n".join(errors[:5])
-            return Err(
-                message=f"No valid items loaded from {filename}. Errors: {len(errors)}\n{error_summary}", code=1
-            )
+            return Err(message=f"No valid items loaded from {filename}. Errors: {len(errors)}\n{error_summary}", code=1)
 
         lgr.info(f"Successfully loaded {len(bibliography)} items from {filename}")
         return Ok(bibliography)

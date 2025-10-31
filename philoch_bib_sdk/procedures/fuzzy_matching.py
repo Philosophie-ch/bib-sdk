@@ -36,7 +36,7 @@ def fuzzy_match_procedure(
     write_report: WriteReportFn,
     top_n: int = 5,
     min_score: float = 0.0,
-) -> Ok[None] | Err:
+) -> None:
     """Execute fuzzy matching workflow with dependency injection.
 
     Args:
@@ -50,7 +50,7 @@ def fuzzy_match_procedure(
         min_score: Minimum score threshold for matches
 
     Returns:
-        Ok[None] on success, Err on failure
+        None on success (raises exception on failure)
     """
     logger.info("Starting fuzzy matching procedure")
     logger.info(f"Bibliography: {bibliography_path}")
@@ -62,8 +62,7 @@ def fuzzy_match_procedure(
     logger.info("Loading bibliography...")
     bibliography_result = load_bibliography(bibliography_path)
     if isinstance(bibliography_result, Err):
-        logger.error(f"Failed to load bibliography: {bibliography_result.message}")
-        return bibliography_result
+        raise RuntimeError(f"Failed to load bibliography: {bibliography_result.message}")
 
     bibliography = bibliography_result.out
     logger.info(f"Loaded {len(bibliography)} items from bibliography")
@@ -72,58 +71,42 @@ def fuzzy_match_procedure(
     logger.info("Loading staged items...")
     staged_result = load_staged(staged_path)
     if isinstance(staged_result, Err):
-        logger.error(f"Failed to load staged items: {staged_result.message}")
-        return staged_result
+        raise RuntimeError(f"Failed to load staged items: {staged_result.message}")
 
     staged_items = staged_result.out
     logger.info(f"Loaded {len(staged_items)} staged items")
 
     if not staged_items:
         logger.warning("No staged items to process")
-        return Ok(None)
+        return None
 
     # Step c: Build fuzzy matching index from bibliography
     logger.info("Building fuzzy matching index...")
-    try:
-        # Convert dict to tuple for indexing
-        bibliography_tuple = tuple(bibliography.values())
-        index = build_index(bibliography_tuple)
-        logger.info("Index built successfully")
-    except Exception as e:
-        error_msg = f"Failed to build index: {e.__class__.__name__}: {e}"
-        logger.error(error_msg)
-        return Err(message=error_msg, code=-1, error_type="IndexBuildError")
+    # Convert dict to tuple for indexing
+    bibliography_tuple = tuple(bibliography.values())
+    index = build_index(bibliography_tuple)
+    logger.info("Index built successfully")
 
     # Step d: Process each staged item to find matches
     logger.info("Processing staged items...")
-    try:
-        staged_with_matches = stage_bibitems_batch(
-            staged_items, index, top_n=top_n, min_score=min_score
+    staged_with_matches = stage_bibitems_batch(staged_items, index, top_n=top_n, min_score=min_score)
+    logger.info(f"Processed {len(staged_with_matches)} items")
+
+    # Log summary statistics
+    total_matches = sum(len(item.top_matches) for item in staged_with_matches)
+    avg_matches = total_matches / len(staged_with_matches) if staged_with_matches else 0
+    logger.info(f"Found {total_matches} total matches (avg {avg_matches:.2f} per item)")
+
+    if staged_with_matches:
+        avg_time = sum(item.search_metadata["search_time_ms"] for item in staged_with_matches) / len(
+            staged_with_matches
         )
-        logger.info(f"Processed {len(staged_with_matches)} items")
-
-        # Log summary statistics
-        total_matches = sum(len(item.top_matches) for item in staged_with_matches)
-        avg_matches = total_matches / len(staged_with_matches) if staged_with_matches else 0
-        logger.info(f"Found {total_matches} total matches (avg {avg_matches:.2f} per item)")
-
-        if staged_with_matches:
-            avg_time = sum(
-                item.search_metadata["search_time_ms"] for item in staged_with_matches
-            ) / len(staged_with_matches)
-            logger.info(f"Average search time: {avg_time:.0f}ms per item")
-
-    except Exception as e:
-        error_msg = f"Failed to process staged items: {e.__class__.__name__}: {e}"
-        logger.error(error_msg)
-        return Err(message=error_msg, code=-1, error_type="ProcessingError")
+        logger.info(f"Average search time: {avg_time:.0f}ms per item")
 
     # Step e: Write report
     logger.info("Writing report...")
     write_result = write_report(output_path, staged_with_matches)
     if isinstance(write_result, Err):
-        logger.error(f"Failed to write report: {write_result.message}")
-        return write_result
+        raise RuntimeError(f"Failed to write report: {write_result.message}")
 
     logger.info("Fuzzy matching procedure completed successfully")
-    return Ok(None)

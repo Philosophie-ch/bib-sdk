@@ -26,6 +26,31 @@ if isinstance(title_attr, BibStringAttr):
     title = title_attr.simplified  # Type narrowed, safe to access
 ```
 
+### Preserve Type Safety - Never Convert to Dicts
+
+**CRITICAL**: Do not convert typed objects to dictionaries to access attributes. This loses all type safety.
+
+```python
+# NEVER DO THIS - loses type safety
+data = bibitem.model_dump()  # or __dict__ or dict(bibitem)
+title = data.get("title", "")  # Type checker cannot verify this
+
+# ALWAYS DO THIS - preserves type safety
+title_attr = bibitem.title
+if isinstance(title_attr, BibStringAttr):
+    title = title_attr.simplified
+else:
+    title = ""
+```
+
+Reasons:
+- Dictionary access bypasses type checking completely
+- Typos in keys are not caught by mypy
+- Attribute renames do not update dictionary keys automatically
+- Type narrowing is lost, leading to runtime errors
+
+Always access attributes directly and use isinstance() for type narrowing.
+
 ### Forward References
 
 Use `TYPE_CHECKING` for imports that are only needed for type annotations to avoid circular imports:

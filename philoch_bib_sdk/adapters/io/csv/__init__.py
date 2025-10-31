@@ -88,9 +88,7 @@ def load_bibliography_csv(filename: str) -> Ok[Dict[str, BibItem]] | Err:
 
                 # Check for duplicate bibkeys
                 if bibkey in bibliography:
-                    errors.append(
-                        f"Row {row_num}: Duplicate bibkey '{bibkey}' (first seen in earlier row)"
-                    )
+                    errors.append(f"Row {row_num}: Duplicate bibkey '{bibkey}' (first seen in earlier row)")
                     continue
 
                 bibliography[bibkey] = bibitem

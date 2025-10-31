@@ -6,7 +6,7 @@ by using multi-index blocking to reduce the search space before applying detaile
 
 import time
 from collections import defaultdict
-from typing import TYPE_CHECKING, DefaultDict, FrozenSet, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, DefaultDict, FrozenSet, Iterator, Sequence, Tuple
 
 from aletk.utils import remove_extra_whitespace
 from cytoolz import topk
@@ -107,8 +107,95 @@ def _get_decade(date: BibItemDateAttr | str) -> int | None:
     return None
 
 
-def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
-    """Build multi-index structure for fast fuzzy matching.
+def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> list[dict[str, Any]]:
+    """Extract minimal data needed by Rust build_index_rust.
+
+    Args:
+        bibitems: Sequence of BibItems to prepare
+
+    Returns:
+        List of dicts with minimal data for Rust
+    """
+    from philoch_bib_sdk.logic.models import BibStringAttr
+
+    items_data = []
+    for i, item in enumerate(bibitems):
+        # Extract title string
+        title_attr = item.title
+        if isinstance(title_attr, BibStringAttr):
+            title = title_attr.simplified
+        else:
+            title = str(title_attr) if title_attr else ""
+
+        # Extract author surnames
+        author_surnames = list(_extract_author_surnames(item.author))
+
+        # Extract year
+        decade = _get_decade(item.date)
+        year = decade if decade is not None else None
+
+        # Extract journal name
+        journal_name = None
+        if item.journal:
+            journal_name_attr = item.journal.name
+            if isinstance(journal_name_attr, BibStringAttr):
+                journal_name = remove_extra_whitespace(journal_name_attr.simplified).lower()
+
+        items_data.append(
+            {
+                "item_index": i,
+                "doi": item.doi if item.doi else None,
+                "title": title,
+                "author_surnames": author_surnames,
+                "year": year,
+                "journal_name": journal_name,
+            }
+        )
+
+    return items_data
+
+
+def _reconstruct_index_from_rust(index_data: Any, items: Tuple[BibItem, ...]) -> BibItemBlockIndex:
+    """Reconstruct BibItemBlockIndex from Rust IndexData.
+
+    Args:
+        index_data: IndexData object from Rust
+        items: Tuple of original BibItems
+
+    Returns:
+        BibItemBlockIndex with all indexes built
+    """
+    # Convert Rust index mappings back to Python objects using original BibItems
+    doi_index = {doi: items[idx] for doi, idx in index_data.doi_to_index.items()}
+
+    title_trigrams = {
+        trigram: frozenset(items[idx] for idx in indices) for trigram, indices in index_data.trigram_to_indices.items()
+    }
+
+    author_surnames = {
+        surname: frozenset(items[idx] for idx in indices) for surname, indices in index_data.surname_to_indices.items()
+    }
+
+    year_decades = {
+        decade: frozenset(items[idx] for idx in indices) for decade, indices in index_data.decade_to_indices.items()
+    }
+
+    journals = {
+        name: frozenset(items[idx] for idx in indices) for name, indices in index_data.journal_to_indices.items()
+    }
+
+    return BibItemBlockIndex(
+        doi_index=doi_index,
+        title_trigrams=title_trigrams,
+        author_surnames=author_surnames,
+        year_decades=year_decades,
+        journals=journals,
+        all_items=items,
+    )
+
+
+def _build_index_python(bibitems: Tuple[BibItem, ...]) -> BibItemBlockIndex:
+    """Pure Python implementation of build_index (fallback).
 
     Creates overlapping indexes to handle dirty data gracefully while maintaining
     fast lookup performance. No pre-filtering means no data loss.
@@ -119,15 +206,12 @@ def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
     - Reduced memory allocations
 
     Args:
-        bibitems: Sequence of BibItems to index
+        bibitems: Tuple of BibItems to index
 
     Returns:
         BibItemBlockIndex with all indexes built
     """
     from philoch_bib_sdk.logic.models import BibStringAttr
-
-    # Convert to tuple for immutability
-    items_tuple = tuple(bibitems)
 
     # Initialize all index structures
     doi_index: dict[str, BibItem] = {}
@@ -137,7 +221,7 @@ def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
     journal_map: DefaultDict[str, set[BibItem]] = defaultdict(set)
 
     # Single pass over all items - build all indexes at once
-    for item in items_tuple:
+    for item in bibitems:
         # DOI index
         if item.doi:
             doi_index[item.doi] = item
@@ -178,8 +262,43 @@ def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
         author_surnames=author_surnames,
         year_decades=year_decades,
         journals=journals,
-        all_items=items_tuple,
+        all_items=bibitems,
     )
+
+
+def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
+    """Build multi-index structure for fast fuzzy matching.
+
+    Creates overlapping indexes to handle dirty data gracefully while maintaining
+    fast lookup performance. No pre-filtering means no data loss.
+
+    Uses Rust implementation when available (100x faster), falls back to Python.
+
+    Args:
+        bibitems: Sequence of BibItems to index
+
+    Returns:
+        BibItemBlockIndex with all indexes built
+    """
+    # Try to use Rust implementation
+    try:
+        from philoch_bib_sdk._rust import build_index_rust  # type: ignore[import-not-found]
+
+        use_rust = True
+    except ImportError:
+        use_rust = False
+
+    # Convert to tuple for immutability
+    items_tuple = tuple(bibitems)
+
+    if use_rust:
+        # Fast path: use Rust
+        items_data = _prepare_items_for_rust(items_tuple)
+        index_data = build_index_rust(items_data)
+        return _reconstruct_index_from_rust(index_data, items_tuple)
+    else:
+        # Fallback: pure Python
+        return _build_index_python(items_tuple)
 
 
 def _get_candidate_set(subject: BibItem, index: BibItemBlockIndex) -> FrozenSet[BibItem]:
@@ -361,3 +480,27 @@ def stage_bibitems_batch(
         Tuple of BibItemStaged objects
     """
     return tuple(stage_bibitem(bibitem, index, top_n, min_score) for bibitem in bibitems)
+
+
+def stage_bibitems_streaming(
+    bibitems: Sequence[BibItem],
+    index: BibItemBlockIndex,
+    top_n: int = 5,
+    min_score: float = 0.0,
+) -> Iterator[BibItemStaged]:
+    """Stage multiple BibItems with streaming results.
+
+    Yields BibItemStaged objects one at a time as they're processed,
+    enabling real-time progress monitoring and immediate CSV output.
+
+    Args:
+        bibitems: Sequence of BibItems to stage
+        index: Pre-built BibItemBlockIndex
+        top_n: Number of top matches per item (default: 5)
+        min_score: Minimum score threshold (default: 0.0)
+
+    Yields:
+        BibItemStaged objects as they're processed
+    """
+    for bibitem in bibitems:
+        yield stage_bibitem(bibitem, index, top_n, min_score)

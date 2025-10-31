@@ -86,9 +86,7 @@ def load_staged(filename: str, max_rows: int | None = None) -> Ok[Tuple[BibItem,
             )
 
 
-def write_report(
-    filename: str, staged: Tuple[BibItemStaged, ...], output_format: str = "csv"
-) -> Ok[None] | Err:
+def write_report(filename: str, staged: Tuple[BibItemStaged, ...], output_format: str = "csv") -> Ok[None] | Err:
     """Write fuzzy matching report with format selection.
 
     Args:
