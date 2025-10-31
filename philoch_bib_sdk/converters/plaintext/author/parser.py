@@ -9,25 +9,36 @@ lgr = get_logger(__name__)
 
 def _parse_normalize(text: str) -> Tuple[str, str, str]:
     """
-    Return a tuple of two strings, the first of which is the given name, and the second of which is the family name. If only one name is found, the second string will be empty.
+    Return a tuple of (given_name, family_name, mononym).
 
-    Fails if more than two names are found.
+    Handles formats:
+    - "Mononym" -> ("", "", "Mononym")
+    - "Family, Given" -> ("Given", "Family", "")
+    - "Family, Suffix, Given" -> ("Given", "Family Suffix", "")
+
+    Suffixes like Jr., Sr., III, etc. are combined with the family name.
     """
     parts = tuple(remove_extra_whitespace(part) for part in text.split(","))
 
-    if len(parts) > 2:
-        raise ValueError(f"Unexpected number of author parts found in '{text}': '{parts}'. Expected 2 or less.")
-
-    elif len(parts) == 0:
+    if len(parts) == 0:
         return ("", "", "")
 
     elif len(parts) == 1:
         # Mononym
         return ("", "", parts[0])
 
-    else:
-        # Full name
+    elif len(parts) == 2:
+        # Full name: "Family, Given"
         return (parts[1], parts[0], "")
+
+    elif len(parts) == 3:
+        # Full name with suffix: "Family, Suffix, Given"
+        # Combine family name and suffix (e.g., "Belnap Jr.")
+        family_with_suffix = f"{parts[0]} {parts[1]}"
+        return (parts[2], family_with_suffix, "")
+
+    else:
+        raise ValueError(f"Unexpected number of author parts found in '{text}': '{parts}'. Expected 3 or less.")
 
 
 def _parse_single(normalized_name_parts: Tuple[str, str, str], bib_string_type: TBibString) -> Author:
