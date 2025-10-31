@@ -17,7 +17,7 @@ import argparse
 import sys
 from functools import partial
 
-from aletk.ResultMonad import Err, Ok, main_try_except_wrapper
+from aletk.ResultMonad import Err, main_try_except_wrapper
 from aletk.utils import get_logger
 
 from philoch_bib_sdk.adapters.io import load_bibliography, load_staged, write_report
@@ -27,11 +27,11 @@ logger = get_logger(__name__)
 
 
 @main_try_except_wrapper(logger)
-def cli() -> Ok[None] | Err:
+def cli() -> None:
     """Command-line interface for fuzzy matching.
 
     Returns:
-        Ok[None] on success, Err on failure
+        None on success (raises exception on failure)
     """
     parser = argparse.ArgumentParser(
         description="Fuzzy match bibliographic items against an existing bibliography.",
@@ -94,18 +94,10 @@ Examples:
 
     # Validate parameters
     if args.top_n < 1:
-        return Err(
-            message="--top-n must be at least 1",
-            code=1,
-            error_type="ValidationError",
-        )
+        raise ValueError("--top-n must be at least 1")
 
     if args.min_score < 0:
-        return Err(
-            message="--min-score must be non-negative",
-            code=1,
-            error_type="ValidationError",
-        )
+        raise ValueError("--min-score must be non-negative")
 
     # Create write_report function with format bound
     write_report_with_format = partial(write_report, output_format=args.format)
@@ -123,16 +115,12 @@ Examples:
         min_score=args.min_score,
     )
 
-    # Handle result
-    match result:
-        case Ok():
-            print(f"Success! Report written to {args.output}.{args.format}")
-            logger.info("Fuzzy matching completed successfully")
-            return Ok(None)
-        case Err(message=msg, code=code):
-            print(f"Error: {msg}", file=sys.stderr)
-            logger.error(f"Fuzzy matching failed: {msg}")
-            return result
+    # Handle result - raise exception if procedure failed
+    if isinstance(result, Err):
+        raise RuntimeError(result.message)
+
+    print(f"Success! Report written to {args.output}.{args.format}")
+    logger.info("Fuzzy matching completed successfully")
 
 
 def main() -> None:
