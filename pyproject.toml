@@ -35,6 +35,7 @@ pytest-env = "^1.1.5"
 autoflake = "^2.3.1"
 odswriter = "^0.4.0"
 fastexcel = "^0.14.0"
+maturin = "^1.0"
 
 [tool.poetry.group.experimental.dependencies]
 cytoolz = "^1.0.1"
