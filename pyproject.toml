@@ -19,6 +19,14 @@ build-backend = "maturin"
 # Note: For development, continue using Poetry commands (poetry install, poetry run, etc.)
 # Poetry will work alongside maturin. Use 'maturin develop' to build the Rust extension.
 # For PyPI releases, use 'maturin build --release'
+  
+dependencies = [                                                                             
+    "aletk>=0.1.6",
+    "attrs>=25.3.0",
+    "polars>=1.32.3",
+    "pydantic>=2.11.9",
+    "cytoolz>=1.0.1",
+]                                                                                            
 
 [tool.poetry.dependencies]
 aletk = "^0.1.6"

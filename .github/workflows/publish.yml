@@ -19,7 +19,7 @@ jobs:
         run: poetry version ${{ github.event.release.tag_name }}
 
       - name: Update Rust version
-        run: sed -i 's/^version = ".*"/version = "${{ github.event.release.tag_name }}"/' philoch_bib_sdk/rust_scorer/Cargo.toml
+        run: sed -i 's/^version = ".*"/version = "${{ github.event.release.tag_name }}"/' Cargo.toml
 
       - name: Upload updated source
         uses: actions/upload-artifact@v4
@@ -142,7 +142,7 @@ jobs:
         run: poetry version ${{ github.event.release.tag_name }}
 
       - name: Update Rust version
-        run: sed -i 's/^version = ".*"/version = "${{ github.event.release.tag_name }}"/' philoch_bib_sdk/rust_scorer/Cargo.toml
+        run: sed -i 's/^version = ".*"/version = "${{ github.event.release.tag_name }}"/' Cargo.toml
 
       - name: Create PR
         run: |
@@ -151,7 +151,7 @@ jobs:
           timestamp=$(date +%s)
           branch="update-version-$timestamp"
           git checkout -b $branch
-          git add pyproject.toml philoch_bib_sdk/rust_scorer/Cargo.toml
+          git add pyproject.toml Cargo.toml
           git commit -m "chore: update version to ${{ github.event.release.tag_name }}"
           git push origin $branch
           gh pr create --title "chore: Bump version to ${{ github.event.release.tag_name }} after successful PyPI publish" --body "This PR updates the project version to ${{ github.event.release.tag_name }} following a successful publish to PyPI." --base main --head $branch
