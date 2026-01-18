@@ -64,7 +64,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml --find-interpreter
+          args: --release --out dist --find-interpreter
           manylinux: auto
 
       - name: Upload wheels
@@ -87,7 +87,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: --out dist --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml
+          args: --out dist
 
       - uses: actions/upload-artifact@v4
         with:
