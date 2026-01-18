@@ -1,6 +1,6 @@
 [package]
 name = "rust_scorer"
-version = "0.3.6"
+version = "0.3.9"
 edition = "2021"
 
 [lib]
