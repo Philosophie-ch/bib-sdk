@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from philoch_bib_sdk.logic.default_models import default_bib_item
 
 if TYPE_CHECKING:
-    from rust_scorer import BibItemData
+    from philoch_bib_sdk._rust import BibItemData
 from philoch_bib_sdk.logic.functions.fuzzy_matcher import (
     BibItemBlockIndex,
     build_index,
@@ -500,7 +500,7 @@ def test_rust_scorer_available() -> None:
 
         pytest.skip("Rust scorer not available")
 
-    import rust_scorer
+    from philoch_bib_sdk import _rust as rust_scorer
 
     # Test basic function exists and works
     score = rust_scorer.token_sort_ratio("hello world", "world hello")
@@ -516,7 +516,7 @@ def test_rust_batch_scorer_basic() -> None:
 
         pytest.skip("Rust scorer not available")
 
-    import rust_scorer
+    from philoch_bib_sdk import _rust as rust_scorer
 
     subjects: list[BibItemData] = [
         {
