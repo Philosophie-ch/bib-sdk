@@ -129,6 +129,9 @@ jobs:
     name: Create version bump PR
     needs: [publish]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -145,8 +148,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config --unset-all http.https://github.com/.extraheader || true
-          git remote set-url origin https://x-access-token:${{ secrets.PR_PAT }}@github.com/${{ github.repository }}.git
           timestamp=$(date +%s)
           branch="update-version-$timestamp"
           git checkout -b $branch
@@ -155,4 +156,4 @@ jobs:
           git push origin $branch
           gh pr create --title "chore: Bump version to ${{ github.event.release.tag_name }} after successful PyPI publish" --body "This PR updates the project version to ${{ github.event.release.tag_name }} following a successful publish to PyPI." --base main --head $branch
         env:
-          GH_TOKEN: ${{ secrets.PR_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
