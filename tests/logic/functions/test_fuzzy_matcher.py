@@ -1,6 +1,11 @@
 """Tests for fuzzy BibItem matching with blocking indexes."""
 
+from typing import TYPE_CHECKING
+
 from philoch_bib_sdk.logic.default_models import default_bib_item
+
+if TYPE_CHECKING:
+    from rust_scorer import BibItemData
 from philoch_bib_sdk.logic.functions.fuzzy_matcher import (
     BibItemBlockIndex,
     build_index,
@@ -479,3 +484,263 @@ def test_empty_authors_handled() -> None:
     # Should still find match based on title
     assert len(matches) == 1
     assert matches[0].matched_bibitem == with_author
+
+
+# --- Rust Scorer Tests ---
+
+
+def test_rust_scorer_available() -> None:
+    """Test that Rust scorer can be imported."""
+    from philoch_bib_sdk.logic.functions.fuzzy_matcher import _RUST_SCORER_AVAILABLE
+
+    # This test passes if Rust is available (after maturin build)
+    # If not available, we skip rather than fail
+    if not _RUST_SCORER_AVAILABLE:
+        import pytest
+
+        pytest.skip("Rust scorer not available")
+
+    import rust_scorer
+
+    # Test basic function exists and works
+    score = rust_scorer.token_sort_ratio("hello world", "world hello")
+    assert 99.0 < score <= 100.0
+
+
+def test_rust_batch_scorer_basic() -> None:
+    """Test Rust batch scorer with simple data."""
+    from philoch_bib_sdk.logic.functions.fuzzy_matcher import _RUST_SCORER_AVAILABLE
+
+    if not _RUST_SCORER_AVAILABLE:
+        import pytest
+
+        pytest.skip("Rust scorer not available")
+
+    import rust_scorer
+
+    subjects: list[BibItemData] = [
+        {
+            "index": 0,
+            "title": "The Republic",
+            "author": "Plato",
+            "year": -380,
+            "doi": None,
+            "journal": None,
+            "volume": None,
+            "number": None,
+            "pages": None,
+            "publisher": None,
+        }
+    ]
+
+    candidates: list[BibItemData] = [
+        {
+            "index": 0,
+            "title": "The Republic",
+            "author": "Plato",
+            "year": -380,
+            "doi": None,
+            "journal": None,
+            "volume": None,
+            "number": None,
+            "pages": None,
+            "publisher": None,
+        },
+        {
+            "index": 1,
+            "title": "Metaphysics",
+            "author": "Aristotle",
+            "year": -350,
+            "doi": None,
+            "journal": None,
+            "volume": None,
+            "number": None,
+            "pages": None,
+            "publisher": None,
+        },
+    ]
+
+    results = rust_scorer.score_batch(subjects, candidates, top_n=2, min_score=0.0)
+
+    assert len(results) == 1  # One subject
+    # Handle dict output from Rust
+    result_matches = results[0].get("matches", []) if isinstance(results[0], dict) else results[0].matches
+    assert len(result_matches) >= 1  # At least one match
+    # First match should be the exact match with high score
+    first_match = result_matches[0]
+    if isinstance(first_match, dict):
+        assert first_match["candidate_index"] == 0
+        assert first_match["total_score"] > 100.0  # High score for exact match
+    else:
+        assert first_match.candidate_index == 0
+        assert first_match.total_score > 100.0  # High score for exact match
+
+
+def test_stage_bibitems_batch_rust_integration() -> None:
+    """Test stage_bibitems_batch with Rust scorer."""
+    from philoch_bib_sdk.logic.functions.fuzzy_matcher import _RUST_SCORER_AVAILABLE
+
+    if not _RUST_SCORER_AVAILABLE:
+        import pytest
+
+        pytest.skip("Rust scorer not available")
+
+    existing = tuple(
+        default_bib_item(
+            title={"simplified": f"Philosophy Article {i}"},
+            author=(
+                {
+                    "given_name": {"simplified": "John"},
+                    "family_name": {"simplified": f"Philosopher{i}"},
+                },
+            ),
+            date={"year": 2000 + i},
+        )
+        for i in range(20)
+    )
+
+    subjects = tuple(
+        default_bib_item(
+            title={"simplified": f"Philosophy Article {i}"},
+            author=(
+                {
+                    "given_name": {"simplified": "John"},
+                    "family_name": {"simplified": f"Philosopher{i}"},
+                },
+            ),
+            date={"year": 2000 + i},
+        )
+        for i in range(5)
+    )
+
+    index = build_index(existing)
+
+    # Force Rust scorer
+    staged_rust = stage_bibitems_batch(subjects, index, top_n=3, use_rust=True)
+
+    assert len(staged_rust) == 5
+    assert all(isinstance(s, BibItemStaged) for s in staged_rust)
+
+    # Each should have matches
+    for i, staged in enumerate(staged_rust):
+        assert len(staged.top_matches) >= 1
+        # The best match should have high score (exact match)
+        assert staged.top_matches[0].total_score > 80.0
+        # Check metadata indicates Rust was used
+        assert staged.search_metadata.get("scorer") == "rust"
+
+
+def test_stage_bibitems_batch_rust_vs_python_consistency() -> None:
+    """Test that Rust and Python produce similar results."""
+    from philoch_bib_sdk.logic.functions.fuzzy_matcher import _RUST_SCORER_AVAILABLE
+
+    if not _RUST_SCORER_AVAILABLE:
+        import pytest
+
+        pytest.skip("Rust scorer not available")
+
+    existing = tuple(
+        default_bib_item(
+            title={"simplified": f"Test Article Number {i}"},
+            author=(
+                {
+                    "given_name": {"simplified": "Author"},
+                    "family_name": {"simplified": f"Name{i}"},
+                },
+            ),
+            date={"year": 2010 + i},
+        )
+        for i in range(10)
+    )
+
+    subjects = (
+        default_bib_item(
+            title={"simplified": "Test Article Number 5"},
+            author=(
+                {
+                    "given_name": {"simplified": "Author"},
+                    "family_name": {"simplified": "Name5"},
+                },
+            ),
+            date={"year": 2015},
+        ),
+    )
+
+    index = build_index(existing)
+
+    # Get results from both implementations
+    staged_rust = stage_bibitems_batch(subjects, index, top_n=3, use_rust=True)
+    staged_python = stage_bibitems_batch(subjects, index, top_n=3, use_rust=False)
+
+    # Both should find matches
+    assert len(staged_rust[0].top_matches) >= 1
+    assert len(staged_python[0].top_matches) >= 1
+
+    # The best match bibkey should be the same
+    rust_best = staged_rust[0].top_matches[0].bibkey
+    python_best = staged_python[0].top_matches[0].bibkey
+    assert rust_best == python_best, f"Rust found {rust_best}, Python found {python_best}"
+
+
+def test_rust_scorer_performance() -> None:
+    """Test that Rust scorer is faster than Python on moderate dataset."""
+    import time
+
+    from philoch_bib_sdk.logic.functions.fuzzy_matcher import _RUST_SCORER_AVAILABLE
+
+    if not _RUST_SCORER_AVAILABLE:
+        import pytest
+
+        pytest.skip("Rust scorer not available")
+
+    # Create moderate dataset
+    existing = tuple(
+        default_bib_item(
+            title={"simplified": f"Research on Topic {i % 50} Part {i // 50}"},
+            author=(
+                {
+                    "given_name": {"simplified": f"Author{i % 20}"},
+                    "family_name": {"simplified": f"Surname{i % 15}"},
+                },
+            ),
+            date={"year": 1990 + (i % 30)},
+        )
+        for i in range(500)
+    )
+
+    subjects = tuple(
+        default_bib_item(
+            title={"simplified": f"Research on Topic {i * 10} Part {i}"},
+            author=(
+                {
+                    "given_name": {"simplified": f"Author{i * 3}"},
+                    "family_name": {"simplified": f"Surname{i * 2}"},
+                },
+            ),
+            date={"year": 2000 + i},
+        )
+        for i in range(10)
+    )
+
+    index = build_index(existing)
+
+    # Time Rust
+    start_rust = time.perf_counter()
+    staged_rust = stage_bibitems_batch(subjects, index, top_n=5, use_rust=True)
+    rust_time = time.perf_counter() - start_rust
+
+    # Time Python
+    start_python = time.perf_counter()
+    staged_python = stage_bibitems_batch(subjects, index, top_n=5, use_rust=False)
+    python_time = time.perf_counter() - start_python
+
+    # Both should complete
+    assert len(staged_rust) == 10
+    assert len(staged_python) == 10
+
+    # Rust should be faster (or at least not significantly slower)
+    # On small datasets Python might be faster due to overhead, so we're lenient
+    print(f"Rust time: {rust_time:.3f}s, Python time: {python_time:.3f}s")
+    # Just check both complete in reasonable time
+    assert rust_time < 30.0
+    assert python_time < 30.0

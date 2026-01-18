@@ -137,12 +137,149 @@ from cytoolz import topk
 top_results = topk(n, items, key=lambda x: x.score)
 ```
 
+## Functional Architecture (Hexagonal / Ports & Adapters)
+
+This project follows hexagonal architecture principles using functional programming. The key insight: **hexagonal architecture doesn't require OOP** - function signatures serve as interfaces.
+
+### Core Principles
+
+1. **Business logic doesn't depend on I/O details**
+2. **Dependencies point inward** - concrete implementations depend on abstract interfaces
+3. **Ports define what you need** - type aliases for function signatures
+4. **Adapters provide how** - concrete implementations matching those signatures
+
+### Defining Ports (Abstract Interfaces)
+
+Use type aliases to define the "shape" of functions your core logic needs:
+
+```python
+from typing import Callable, Generator
+
+# Port: what the core logic needs (abstract)
+type TContentReader[ReaderIn] = Callable[[ReaderIn], Generator[Content, None, None]]
+type TContentWriter[WriterIn] = Callable[[Generator[Content, None, None], WriterIn], None]
+type TTransform = Callable[[str], str]
+```
+
+The type signature **is** the contract. Any function matching that signature can be injected.
+
+### Implementing Adapters (Concrete Implementations)
+
+Create concrete functions that satisfy the port signatures:
+
+```python
+# Adapter: filesystem implementation
+def filesystem_content_reader(input_dirname: str) -> Generator[Content, None, None]:
+    for file_name in os.listdir(input_dirname):
+        yield read_file(os.path.join(input_dirname, file_name))
+
+# Adapter: database implementation (alternative)
+def database_content_reader(connection_string: str) -> Generator[Content, None, None]:
+    # ... database-specific logic
+```
+
+### Abstract Process Functions
+
+Write core logic that accepts injected functions:
+
+```python
+def abstract_process[I, O](
+    content_reader: TContentReader[I],
+    reader_input: I,
+    transform: TTransform,
+    content_writer: TContentWriter[O],
+    writer_input: O,
+) -> None:
+    """Core business logic - knows nothing about filesystems, databases, etc."""
+    raw_content = content_reader(reader_input)
+    processed = (transform(item) for item in raw_content)
+    content_writer(processed, writer_input)
+```
+
+### Wiring: Injecting Dependencies
+
+Create concrete entry points that wire everything together:
+
+```python
+def main_filesystem(input_dir: str, output_dir: str) -> None:
+    """Concrete implementation using filesystem adapters."""
+    abstract_process(
+        content_reader=filesystem_content_reader,
+        reader_input=input_dir,
+        transform=my_transform_function,
+        content_writer=filesystem_content_writer,
+        writer_input=output_dir,
+    )
+```
+
+### Benefits Over OOP-Style Dependency Injection
+
+| Aspect | FP Style | OOP Style |
+|--------|----------|-----------|
+| Interface definition | Type alias | Abstract class/Protocol |
+| Boilerplate | Minimal | Class definitions, `__init__`, etc. |
+| Testing | Pass mock functions directly | Mock objects, DI frameworks |
+| Composition | Natural function composition | Decorator pattern, etc. |
+| State | Explicit (parameters) | Hidden in `self` |
+
+### When to Use This Pattern
+
+Use functional hexagonal architecture when:
+
+- Processing pipelines (read → transform → write)
+- Multiple I/O backends are possible (filesystem, database, API)
+- Business logic should be testable in isolation
+- You want to swap implementations without changing core logic
+
+### Example: Complete Module Structure
+
+```python
+# types.py - Port definitions
+type TFixFootnotes = Callable[[str], str]
+type TRemoveReferences = Callable[[str], str]
+type TContentReader[In] = Callable[[In], Generator[Content, None, None]]
+type TContentWriter[Out] = Callable[[Generator[Content, None, None], Out], None]
+
+# core.py - Abstract process (pure business logic)
+def postprocess_html(
+    content: str,
+    fix_footnotes: TFixFootnotes,
+    remove_references: TRemoveReferences,
+) -> str:
+    return remove_references(fix_footnotes(content))
+
+def abstract_process[I, O](...) -> None:
+    # Orchestration logic
+
+# adapters/filesystem.py - Filesystem adapter
+def filesystem_reader(dirname: str) -> Generator[Content, None, None]: ...
+def filesystem_writer(contents: Generator[Content, None, None], dirname: str) -> None: ...
+
+# adapters/transforms.py - Transform implementations
+def bs4_fix_footnotes(content: str) -> str: ...
+def bs4_remove_references(content: str) -> str: ...
+
+# main.py - Wiring
+def main_bs4_filesystem(input_dir: str, output_dir: str) -> None:
+    abstract_process(
+        content_reader=filesystem_reader,
+        reader_input=input_dir,
+        fix_footnotes=bs4_fix_footnotes,
+        remove_references=bs4_remove_references,
+        content_writer=filesystem_writer,
+        writer_input=output_dir,
+    )
+```
+
 ## Code Organization
 
 ### Module Structure
 
+- **Types/Ports**: Type aliases defining function signatures (interfaces)
+- **Core**: Abstract process functions that accept injected dependencies
+- **Adapters**: Concrete implementations for I/O and transformations
+- **Main/Wiring**: Entry points that wire adapters into core logic
 - **Models**: Define data structures using `attrs.define(frozen=True, slots=True)`
-- **Functions**: Pure functions that transform data
 - **No classes** except for simple data containers and index structures
 
 ### Function Design
@@ -152,6 +289,7 @@ Functions should be:
 - **Pure** when possible (no side effects)
 - **Small and focused** (single responsibility)
 - **Composable** (easy to combine with other functions)
+- **Injectable** (accept dependencies as parameters rather than importing them)
 
 ### Imports
 
