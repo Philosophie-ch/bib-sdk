@@ -38,10 +38,10 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
           # macOS x86_64 (Intel)
-          - os: macos-13
+          - os: macos-15-intel
             target: x86_64-apple-darwin
           # macOS ARM64 (Apple Silicon)
-          - os: macos-14
+          - os: macos-latest
             target: aarch64-apple-darwin
           # Windows x86_64
           - os: windows-latest
@@ -61,7 +61,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml
+          args: --release --out dist --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml --find-interpreter
           manylinux: auto
 
       - name: Upload wheels
