@@ -39,7 +39,7 @@ jobs:
         poetry install --no-root
 
     - name: Build Rust extension
-      run: poetry run maturin develop
+      run: poetry run maturin develop --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml
 
     - name: Run black
       run: poetry run black --check .
