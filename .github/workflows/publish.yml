@@ -143,6 +143,7 @@ jobs:
 
       - name: Create PR
         run: |
+          gh auth setup-git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           timestamp=$(date +%s)
