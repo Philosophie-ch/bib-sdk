@@ -1,6 +1,8 @@
 from functools import partial
 from typing import Callable, NamedTuple
 
+import polars as pl
+
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_parser import hard_parse_bibkey
 from philoch_bib_sdk.logic.functions.journal_article_matcher import (
     TJournalBibkeyIndex,
@@ -27,8 +29,6 @@ def _read_from_ods(
     Returns:
         TJournalBibkeyIndex: A dictionary mapping (journal, volume, number) tuples to bibkey values.
     """
-    import polars as pl
-
     df = pl.read_ods(
         source=file_path,
         has_header=True,

@@ -1,0 +1,26 @@
+[package]
+name = "rust_scorer"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rust_scorer"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.25.0"
+rayon = "1.11.0"
+strsim = "0.11.1"
+
+[lints.clippy]
+all = "warn"
+# Type safety: prevent silent numeric conversions
+cast_possible_truncation = "warn"
+cast_sign_loss = "warn"
+cast_possible_wrap = "warn"
+cast_lossless = "warn"
+# Efficiency
+redundant_clone = "warn"
+
+[lints.rust]
+warnings = "deny"

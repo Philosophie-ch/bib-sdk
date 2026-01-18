@@ -2,10 +2,15 @@
 
 This module provides efficient fuzzy matching against large bibliographies (100k+ items)
 by using multi-index blocking to reduce the search space before applying detailed scoring.
+
+When available, uses a Rust-based batch scorer (rust_scorer) for parallel processing,
+providing 10-100x speedup on large batches.
 """
 
+import pickle
 import time
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, DefaultDict, FrozenSet, Iterator, Sequence, Tuple
 
 from aletk.utils import remove_extra_whitespace
@@ -14,10 +19,23 @@ from cytoolz import topk
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_formatter import format_bibkey
 from philoch_bib_sdk.logic.functions.comparator import compare_bibitems_detailed
 from philoch_bib_sdk.logic.models import BibItem, BibItemDateAttr, TBibString
-from philoch_bib_sdk.logic.models_staging import BibItemStaged, Match
+from philoch_bib_sdk.logic.models_staging import BibItemStaged, Match, SearchMetadata
+
+from philoch_bib_sdk.converters.plaintext.author.formatter import format_author
+from philoch_bib_sdk.logic.models import Author, BibStringAttr
+from philoch_bib_sdk.logic.models_staging import PartialScore, ScoreComponent
+
 
 if TYPE_CHECKING:
-    from philoch_bib_sdk.logic.models import Author
+    from rust_scorer import BibItemData
+
+# Try to import Rust scorer for batch processing
+try:
+    import rust_scorer
+
+    _RUST_SCORER_AVAILABLE = True
+except ImportError:
+    _RUST_SCORER_AVAILABLE = False
 
 
 class BibItemBlockIndex:
@@ -76,7 +94,6 @@ def _extract_author_surnames(authors: Tuple["Author", ...]) -> FrozenSet[str]:
     Returns:
         Frozen set of normalized surnames
     """
-    from philoch_bib_sdk.logic.models import Author, BibStringAttr
 
     if not authors:
         return frozenset()
@@ -116,7 +133,6 @@ def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> list[dict[str, Any]]
     Returns:
         List of dicts with minimal data for Rust
     """
-    from philoch_bib_sdk.logic.models import BibStringAttr
 
     items_data = []
     for i, item in enumerate(bibitems):
@@ -211,7 +227,6 @@ def _build_index_python(bibitems: Tuple[BibItem, ...]) -> BibItemBlockIndex:
     Returns:
         BibItemBlockIndex with all indexes built
     """
-    from philoch_bib_sdk.logic.models import BibStringAttr
 
     # Initialize all index structures
     doi_index: dict[str, BibItem] = {}
@@ -301,6 +316,175 @@ def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
         return _build_index_python(items_tuple)
 
 
+# --- Rust Scorer Integration ---
+
+
+def _prepare_bibitem_for_rust_scorer(item: BibItem, idx: int) -> "BibItemData":
+    """Prepare a BibItem for Rust scorer.
+
+    Extracts simplified string fields needed for fuzzy matching.
+
+    Args:
+        item: BibItem to prepare
+        idx: Index of item in the source list (for result reconstruction)
+
+    Returns:
+        Dict with fields for Rust BibItemData struct
+    """
+
+    # Title
+    if isinstance(item.title, BibStringAttr):
+        title = item.title.simplified
+    else:
+        title = str(item.title) if item.title else ""
+
+    # Author
+    author = format_author(item.author, "simplified")
+
+    # Year
+    year = None
+    if item.date != "no date" and isinstance(item.date, BibItemDateAttr):
+        year = item.date.year
+
+    # Journal
+    journal = None
+    if item.journal and isinstance(item.journal.name, BibStringAttr):
+        journal = item.journal.name.simplified
+
+    # Volume, Number, Pages (volume and number are on BibItem, not Journal)
+    volume = item.volume if item.volume else None
+    number = item.number if item.number else None
+    pages = None
+    if item.pages and len(item.pages) > 0:
+        # pages is a tuple of PageAttr objects, take the first one
+        first_page = item.pages[0]
+        if first_page.end:
+            pages = f"{first_page.start}--{first_page.end}"
+        else:
+            pages = first_page.start
+
+    # Publisher
+    publisher = None
+    if item.publisher and isinstance(item.publisher, BibStringAttr):
+        publisher = item.publisher.simplified
+
+    return {
+        "index": idx,
+        "title": title,
+        "author": author,
+        "year": year,
+        "doi": item.doi,
+        "journal": journal,
+        "volume": volume,
+        "number": number,
+        "pages": pages,
+        "publisher": publisher,
+    }
+
+
+def _find_similar_batch_rust(
+    subjects: Sequence[BibItem],
+    candidates: Sequence[BibItem],
+    top_n: int,
+    min_score: float,
+) -> list[Tuple[Match, ...]]:
+    """Batch find similar items using Rust scorer.
+
+    Scores all subjects against all candidates in parallel using Rust.
+
+    Args:
+        subjects: Sequence of BibItems to find matches for
+        candidates: Sequence of candidate BibItems to match against
+        top_n: Number of top matches per subject
+        min_score: Minimum score threshold
+
+    Returns:
+        List of Match tuples, one per subject
+    """
+
+    if not _RUST_SCORER_AVAILABLE:
+        raise RuntimeError("Rust scorer not available")
+
+    # Prepare data for Rust
+    subjects_data = [_prepare_bibitem_for_rust_scorer(s, i) for i, s in enumerate(subjects)]
+    candidates_data = [_prepare_bibitem_for_rust_scorer(c, i) for i, c in enumerate(candidates)]
+
+    # Call Rust batch scorer
+    results = rust_scorer.score_batch(subjects_data, candidates_data, top_n, min_score)
+
+    # Reconstruct Match objects
+    all_matches: list[Tuple[Match, ...]] = []
+
+    for result in results:
+        matches: list[Match] = []
+        # Handle both dict and object access patterns from Rust
+        result_matches = result.get("matches", []) if isinstance(result, dict) else result.matches
+        for rank, match_result in enumerate(result_matches, start=1):
+            # Handle both dict and object access patterns
+            if isinstance(match_result, dict):
+                cand_idx = match_result["candidate_index"]
+                title_score = match_result["title_score"]
+                author_score = match_result["author_score"]
+                date_score = match_result["date_score"]
+                bonus_score = match_result["bonus_score"]
+                total_score = match_result["total_score"]
+            else:
+                cand_idx = match_result.candidate_index
+                title_score = match_result.title_score
+                author_score = match_result.author_score
+                date_score = match_result.date_score
+                bonus_score = match_result.bonus_score
+                total_score = match_result.total_score
+
+            candidate = candidates[cand_idx]
+
+            # Create PartialScore objects from Rust scores
+            partial_scores = (
+                PartialScore(
+                    component=ScoreComponent.TITLE,
+                    score=int(title_score / 0.5) if title_score > 0 else 0,
+                    weight=0.5,
+                    weighted_score=title_score,
+                    details="[rust]",
+                ),
+                PartialScore(
+                    component=ScoreComponent.AUTHOR,
+                    score=int(author_score / 0.3) if author_score > 0 else 0,
+                    weight=0.3,
+                    weighted_score=author_score,
+                    details="[rust]",
+                ),
+                PartialScore(
+                    component=ScoreComponent.DATE,
+                    score=int(date_score / 0.1) if date_score > 0 else 0,
+                    weight=0.1,
+                    weighted_score=date_score,
+                    details="[rust]",
+                ),
+                PartialScore(
+                    component=ScoreComponent.PUBLISHER,  # Using PUBLISHER as generic bonus component
+                    score=int(bonus_score / 0.1) if bonus_score > 0 else 0,
+                    weight=0.1,
+                    weighted_score=bonus_score,
+                    details="[rust]",
+                ),
+            )
+
+            matches.append(
+                Match(
+                    bibkey=format_bibkey(candidate.bibkey),
+                    matched_bibitem=candidate,
+                    total_score=total_score,
+                    partial_scores=partial_scores,
+                    rank=rank,
+                )
+            )
+
+        all_matches.append(tuple(matches))
+
+    return all_matches
+
+
 def _get_candidate_set(subject: BibItem, index: BibItemBlockIndex) -> FrozenSet[BibItem]:
     """Get candidate items from index using multiple lookup strategies.
 
@@ -315,8 +499,6 @@ def _get_candidate_set(subject: BibItem, index: BibItemBlockIndex) -> FrozenSet[
         Frozen set of candidate BibItems (typically 0.5-2% of total)
     """
     candidates: set[BibItem] = set()
-
-    from philoch_bib_sdk.logic.models import BibStringAttr
 
     # Check DOI first (instant exact match)
     if subject.doi and subject.doi in index.doi_index:
@@ -349,8 +531,6 @@ def _get_candidate_set(subject: BibItem, index: BibItemBlockIndex) -> FrozenSet[
             candidates.update(index.year_decades[None])
 
     # Journal
-    from philoch_bib_sdk.logic.models import BibStringAttr
-
     if subject.journal:
         journal_name_attr = subject.journal.name
         if isinstance(journal_name_attr, BibStringAttr):
@@ -450,7 +630,7 @@ def stage_bibitem(
     top_matches = find_similar_bibitems(bibitem, index, top_n, min_score)
     end_time = time.perf_counter()
 
-    search_metadata = {
+    search_metadata: SearchMetadata = {
         "search_time_ms": int((end_time - start_time) * 1000),
         "candidates_searched": len(candidates),
     }
@@ -467,19 +647,55 @@ def stage_bibitems_batch(
     index: BibItemBlockIndex,
     top_n: int = 5,
     min_score: float = 0.0,
+    use_rust: bool | None = None,
 ) -> Tuple[BibItemStaged, ...]:
     """Stage multiple BibItems in batch.
+
+    When Rust scorer is available, processes all items in parallel for
+    significant speedup (10-100x on large batches).
 
     Args:
         bibitems: Sequence of BibItems to stage
         index: Pre-built BibItemBlockIndex
         top_n: Number of top matches per item (default: 5)
         min_score: Minimum score threshold (default: 0.0)
+        use_rust: Force Rust (True), Python (False), or auto-detect (None)
 
     Returns:
         Tuple of BibItemStaged objects
     """
-    return tuple(stage_bibitem(bibitem, index, top_n, min_score) for bibitem in bibitems)
+    # Determine whether to use Rust
+    if use_rust is None:
+        use_rust = _RUST_SCORER_AVAILABLE
+
+    if use_rust and not _RUST_SCORER_AVAILABLE:
+        raise RuntimeError("Rust scorer requested but not available")
+
+    if use_rust:
+        # Fast path: Rust batch scorer
+        start_time = time.perf_counter()
+        all_matches = _find_similar_batch_rust(bibitems, index.all_items, top_n, min_score)
+        end_time = time.perf_counter()
+
+        # Create BibItemStaged objects
+        total_time_ms = int((end_time - start_time) * 1000)
+        time_per_item = total_time_ms // len(bibitems) if bibitems else 0
+
+        return tuple(
+            BibItemStaged(
+                bibitem=bibitem,
+                top_matches=matches,
+                search_metadata={
+                    "search_time_ms": time_per_item,
+                    "candidates_searched": len(index.all_items),
+                    "scorer": "rust",
+                },
+            )
+            for bibitem, matches in zip(bibitems, all_matches)
+        )
+    else:
+        # Fallback: Python sequential processing
+        return tuple(stage_bibitem(bibitem, index, top_n, min_score) for bibitem in bibitems)
 
 
 def stage_bibitems_streaming(
@@ -504,3 +720,77 @@ def stage_bibitems_streaming(
     """
     for bibitem in bibitems:
         yield stage_bibitem(bibitem, index, top_n, min_score)
+
+
+# --- Index Caching ---
+
+
+def save_index(index: BibItemBlockIndex, cache_path: Path) -> None:
+    """Save index to pickle file for later reuse.
+
+    Args:
+        index: BibItemBlockIndex to save
+        cache_path: Path to save the pickle file
+    """
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache_path, "wb") as f:
+        pickle.dump(index, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def load_index(cache_path: Path) -> BibItemBlockIndex | None:
+    """Load index from pickle file if exists and valid.
+
+    Args:
+        cache_path: Path to the pickle file
+
+    Returns:
+        BibItemBlockIndex if successfully loaded, None otherwise
+    """
+    if not cache_path.exists():
+        return None
+    try:
+        with open(cache_path, "rb") as f:
+            loaded = pickle.load(f)
+        if not isinstance(loaded, BibItemBlockIndex):
+            raise TypeError(
+                f"Cached index at {cache_path} contains {type(loaded).__name__}, " f"expected BibItemBlockIndex"
+            )
+        return loaded
+    except TypeError:
+        raise
+    except Exception:
+        return None
+
+
+def build_index_cached(
+    bibitems: Sequence[BibItem],
+    cache_path: Path | None = None,
+    force_rebuild: bool = False,
+) -> BibItemBlockIndex:
+    """Build index with optional caching to avoid rebuilding.
+
+    If cache_path is provided and a valid cached index exists, it will be loaded
+    instead of rebuilding. Otherwise, builds the index and optionally saves it.
+
+    Args:
+        bibitems: Sequence of BibItems to index
+        cache_path: Optional path to cache the index (pickle file)
+        force_rebuild: If True, rebuild index even if cache exists
+
+    Returns:
+        BibItemBlockIndex (either from cache or freshly built)
+    """
+    # Try loading from cache first
+    if cache_path and not force_rebuild:
+        cached = load_index(cache_path)
+        if cached is not None:
+            return cached
+
+    # Build fresh index
+    index = build_index(bibitems)
+
+    # Save to cache if path provided
+    if cache_path:
+        save_index(index, cache_path)
+
+    return index

@@ -6,9 +6,24 @@ new BibItems against an existing bibliography.
 
 import json
 from enum import StrEnum
-from typing import Tuple
+from typing import Tuple, TypedDict
 
 import attrs
+
+
+class SearchMetadata(TypedDict, total=False):
+    """Metadata about a fuzzy matching search operation.
+
+    Attributes:
+        search_time_ms: Time taken for the search in milliseconds
+        candidates_searched: Number of candidates evaluated
+        scorer: Which scorer was used ("rust" or "python")
+    """
+
+    search_time_ms: int
+    candidates_searched: int
+    scorer: str
+
 
 from philoch_bib_sdk.converters.plaintext.author.formatter import format_author
 from philoch_bib_sdk.logic.models import BibItem
@@ -112,7 +127,7 @@ class BibItemStaged:
 
     bibitem: BibItem
     top_matches: Tuple[Match, ...]
-    search_metadata: dict[str, int]
+    search_metadata: SearchMetadata
 
     def to_csv_row(self) -> dict[str, str | int | float]:
         """Export as a flat CSV row with nested JSON for match details.

@@ -2,7 +2,7 @@ from aletk.utils import get_logger, fuzzy_match_score, remove_extra_whitespace
 
 from typing import Tuple, TypedDict
 from philoch_bib_sdk.converters.plaintext.author.formatter import format_author
-from philoch_bib_sdk.logic.models import BibItem, BibItemDateAttr, TBibString
+from philoch_bib_sdk.logic.models import BibItem, BibItemDateAttr, BibStringAttr, TBibString
 from philoch_bib_sdk.logic.models_staging import PartialScore, ScoreComponent
 
 
@@ -388,8 +388,6 @@ def compare_bibitems_detailed(
     weight_title, weight_author, weight_date, weight_bonus = weights
 
     # Title scoring - handle both string and BibStringAttr
-    from philoch_bib_sdk.logic.models import BibStringAttr
-
     if isinstance(reference.title, BibStringAttr):
         title_1 = getattr(reference.title, bibstring_type)
     else:
