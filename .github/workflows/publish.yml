@@ -143,9 +143,10 @@ jobs:
 
       - name: Create PR
         run: |
-          gh auth setup-git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --unset-all http.https://github.com/.extraheader || true
+          git remote set-url origin https://x-access-token:${{ secrets.PR_PAT }}@github.com/${{ github.repository }}.git
           timestamp=$(date +%s)
           branch="update-version-$timestamp"
           git checkout -b $branch
