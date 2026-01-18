@@ -27,11 +27,11 @@ from philoch_bib_sdk.logic.models_staging import PartialScore, ScoreComponent
 
 
 if TYPE_CHECKING:
-    from rust_scorer import BibItemData
+    from philoch_bib_sdk._rust import BibItemData, ItemData
 
 # Try to import Rust scorer for batch processing
 try:
-    import rust_scorer
+    from philoch_bib_sdk import _rust as rust_scorer
 
     _RUST_SCORER_AVAILABLE = True
 except ImportError:
@@ -124,7 +124,7 @@ def _get_decade(date: BibItemDateAttr | str) -> int | None:
     return None
 
 
-def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> list[dict[str, Any]]:
+def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> "list[ItemData]":
     """Extract minimal data needed by Rust build_index_rust.
 
     Args:
@@ -134,7 +134,7 @@ def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> list[dict[str, Any]]
         List of dicts with minimal data for Rust
     """
 
-    items_data = []
+    items_data: list[ItemData] = []
     for i, item in enumerate(bibitems):
         # Extract title string
         title_attr = item.title
@@ -297,7 +297,7 @@ def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
     """
     # Try to use Rust implementation
     try:
-        from philoch_bib_sdk._rust import build_index_rust  # type: ignore[import-not-found]
+        from philoch_bib_sdk._rust import build_index_rust
 
         use_rust = True
     except ImportError:
