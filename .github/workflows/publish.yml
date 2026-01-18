@@ -5,68 +5,144 @@ on:
     types: [published]
 
 jobs:
-
-  build-and-publish:
-    name: Build and Publish
+  # First: update version in pyproject.toml and upload as artifact
+  version:
+    name: Update version
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      contents: write
-      id-token: write
-      pull-requests: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
 
       - name: Install Poetry
         run: pip install poetry
 
-      - name: Configure Poetry
-        run: |
-            poetry config virtualenvs.create false
+      - name: Update version
+        run: poetry version ${{ github.event.release.tag_name }}
 
-      - name: Install dependencies
-        run: poetry install
+      - name: Upload updated source
+        uses: actions/upload-artifact@v4
+        with:
+          name: versioned-source
+          path: .
+
+  build:
+    name: Build wheels (${{ matrix.target }})
+    needs: [version]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          # Linux ARM64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          # macOS x86_64 (Intel)
+          - os: macos-13
+            target: x86_64-apple-darwin
+          # macOS ARM64 (Apple Silicon)
+          - os: macos-14
+            target: aarch64-apple-darwin
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Download versioned source
+        uses: actions/download-artifact@v4
+        with:
+          name: versioned-source
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml
+          manylinux: auto
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.target }}
+          path: dist/*.whl
+
+  sdist:
+    name: Build source distribution
+    needs: [version]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download versioned source
+        uses: actions/download-artifact@v4
+        with:
+          name: versioned-source
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path philoch_bib_sdk/rust_scorer/Cargo.toml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist/*.tar.gz
+
+  publish:
+    name: Publish to PyPI
+    needs: [build, sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive dist/*
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Upload to GitHub Release
+        run: gh release upload ${{ github.event.release.tag_name }} dist/*
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  version-pr:
+    name: Create version bump PR
+    needs: [publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pip install poetry
 
       - name: Update version
         run: poetry version ${{ github.event.release.tag_name }}
 
-      - name: Build wheel with maturin
-        run: poetry run maturin build --release
-
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Create PR
         run: |
-            pip install twine
-            twine upload target/wheels/*.whl
-
-      - name: Upload Assets to GitHub Release
-        run: gh release upload ${{ github.event.release.tag_name }} target/wheels/*
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          timestamp=$(date +%s)
+          branch="update-version-$timestamp"
+          git checkout -b $branch
+          git add pyproject.toml
+          git commit -m "chore: update version to ${{ github.event.release.tag_name }}"
+          git push origin $branch
+          gh pr create --title "chore: Bump version to ${{ github.event.release.tag_name }} after successful PyPI publish" --body "This PR updates the project version to ${{ github.event.release.tag_name }} following a successful publish to PyPI." --base main --head $branch
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create PR to update version
-        run: |
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            timestamp=$(date +%s)
-            branch="update-version-$timestamp"
-            git checkout -b $branch
-            git add pyproject.toml
-            git commit -m "chore: update version to ${{ github.event.release.tag_name }}"
-            git push origin $branch
-            gh pr create --title "chore: Bump version to ${{ github.event.release.tag_name }} after successful PyPI publish" --body "This PR updates the project version to ${{ github.event.release.tag_name }} following a successful publish to PyPI." --base main --head $branch
-
-        env:
-            GH_TOKEN: ${{ secrets.PR_PAT }}
+          GH_TOKEN: ${{ secrets.PR_PAT }}
