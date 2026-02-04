@@ -12,6 +12,8 @@ def test_bibkey_parser() -> None:
         "bordogarcia_l:forthcoming-1",
         "bordogarcia_l-olivadoti_s:2027z2",
         "bordogarcia_l-olivadoti_s:2027",
+        "plato:-380",
+        "plato:-380a",
     ]
 
     for bibkey_str in test_cases:

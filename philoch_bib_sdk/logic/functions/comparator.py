@@ -391,12 +391,12 @@ def compare_bibitems_detailed(
     if isinstance(reference.title, BibStringAttr):
         title_1 = getattr(reference.title, bibstring_type)
     else:
-        title_1 = str(reference.title) if reference.title else ""
+        title_1 = ""
 
     if isinstance(subject.title, BibStringAttr):
         title_2 = getattr(subject.title, bibstring_type)
     else:
-        title_2 = str(subject.title) if subject.title else ""
+        title_2 = ""
 
     title_partial = _score_title_detailed(title_1, title_2, weight_title)
 

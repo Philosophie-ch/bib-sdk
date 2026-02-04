@@ -11,7 +11,7 @@ import pickle
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, DefaultDict, FrozenSet, Iterator, Sequence, Tuple
+from typing import TYPE_CHECKING, DefaultDict, FrozenSet, Iterator, Sequence, Tuple
 
 from aletk.utils import remove_extra_whitespace
 from cytoolz import topk
@@ -27,7 +27,7 @@ from philoch_bib_sdk.logic.models_staging import PartialScore, ScoreComponent
 
 
 if TYPE_CHECKING:
-    from philoch_bib_sdk._rust import BibItemData, ItemData
+    from philoch_bib_sdk._rust import BibItemData, IndexData, ItemData
 
 # Try to import Rust scorer for batch processing
 try:
@@ -100,10 +100,9 @@ def _extract_author_surnames(authors: Tuple["Author", ...]) -> FrozenSet[str]:
 
     surnames: list[str] = []
     for author in authors:
-        if isinstance(author, Author):
-            family_name_attr = author.family_name
-            if isinstance(family_name_attr, BibStringAttr) and family_name_attr.simplified:
-                surnames.append(remove_extra_whitespace(family_name_attr.simplified).lower())
+        family_name_attr = author.family_name
+        if family_name_attr.simplified:
+            surnames.append(remove_extra_whitespace(family_name_attr.simplified).lower())
 
     return frozenset(surnames)
 
@@ -141,7 +140,7 @@ def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> "list[ItemData]":
         if isinstance(title_attr, BibStringAttr):
             title = title_attr.simplified
         else:
-            title = str(title_attr) if title_attr else ""
+            title = ""
 
         # Extract author surnames
         author_surnames = list(_extract_author_surnames(item.author))
@@ -153,9 +152,7 @@ def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> "list[ItemData]":
         # Extract journal name
         journal_name = None
         if item.journal:
-            journal_name_attr = item.journal.name
-            if isinstance(journal_name_attr, BibStringAttr):
-                journal_name = remove_extra_whitespace(journal_name_attr.simplified).lower()
+            journal_name = remove_extra_whitespace(item.journal.name.simplified).lower()
 
         items_data.append(
             {
@@ -171,7 +168,7 @@ def _prepare_items_for_rust(bibitems: Sequence[BibItem]) -> "list[ItemData]":
     return items_data
 
 
-def _reconstruct_index_from_rust(index_data: Any, items: Tuple[BibItem, ...]) -> BibItemBlockIndex:
+def _reconstruct_index_from_rust(index_data: "IndexData", items: Tuple[BibItem, ...]) -> BibItemBlockIndex:
     """Reconstruct BibItemBlockIndex from Rust IndexData.
 
     Args:
@@ -295,25 +292,21 @@ def build_index(bibitems: Sequence[BibItem]) -> BibItemBlockIndex:
     Returns:
         BibItemBlockIndex with all indexes built
     """
+    # Convert to tuple for immutability
+    items_tuple = tuple(bibitems)
+
     # Try to use Rust implementation
     try:
         from philoch_bib_sdk._rust import build_index_rust
 
-        use_rust = True
-    except ImportError:
-        use_rust = False
-
-    # Convert to tuple for immutability
-    items_tuple = tuple(bibitems)
-
-    if use_rust:
-        # Fast path: use Rust
         items_data = _prepare_items_for_rust(items_tuple)
         index_data = build_index_rust(items_data)
         return _reconstruct_index_from_rust(index_data, items_tuple)
-    else:
-        # Fallback: pure Python
-        return _build_index_python(items_tuple)
+    except ImportError:
+        pass
+
+    # Fallback: pure Python
+    return _build_index_python(items_tuple)
 
 
 # --- Rust Scorer Integration ---
@@ -336,19 +329,19 @@ def _prepare_bibitem_for_rust_scorer(item: BibItem, idx: int) -> "BibItemData":
     if isinstance(item.title, BibStringAttr):
         title = item.title.simplified
     else:
-        title = str(item.title) if item.title else ""
+        title = ""
 
     # Author
     author = format_author(item.author, "simplified")
 
     # Year
     year = None
-    if item.date != "no date" and isinstance(item.date, BibItemDateAttr):
+    if isinstance(item.date, BibItemDateAttr):
         year = item.date.year
 
     # Journal
     journal = None
-    if item.journal and isinstance(item.journal.name, BibStringAttr):
+    if item.journal:
         journal = item.journal.name.simplified
 
     # Volume, Number, Pages (volume and number are on BibItem, not Journal)
@@ -417,24 +410,14 @@ def _find_similar_batch_rust(
 
     for result in results:
         matches: list[Match] = []
-        # Handle both dict and object access patterns from Rust
-        result_matches = result.get("matches", []) if isinstance(result, dict) else result.matches
+        result_matches = result["matches"]
         for rank, match_result in enumerate(result_matches, start=1):
-            # Handle both dict and object access patterns
-            if isinstance(match_result, dict):
-                cand_idx = match_result["candidate_index"]
-                title_score = match_result["title_score"]
-                author_score = match_result["author_score"]
-                date_score = match_result["date_score"]
-                bonus_score = match_result["bonus_score"]
-                total_score = match_result["total_score"]
-            else:
-                cand_idx = match_result.candidate_index
-                title_score = match_result.title_score
-                author_score = match_result.author_score
-                date_score = match_result.date_score
-                bonus_score = match_result.bonus_score
-                total_score = match_result.total_score
+            cand_idx = match_result["candidate_index"]
+            title_score = match_result["title_score"]
+            author_score = match_result["author_score"]
+            date_score = match_result["date_score"]
+            bonus_score = match_result["bonus_score"]
+            total_score = match_result["total_score"]
 
             candidate = candidates[cand_idx]
 

@@ -12,14 +12,16 @@ def format_renderable(
     match renderable:
 
         case BaseRenderable(text, id):
-            if not text:
+            value = getattr(text, bibstring_type)
+            if not value:
                 return ""
-            return f"{getattr(text, bibstring_type)}"
+            return f"{value}"
 
         case BaseNamedRenderable(name, id):
-            if not name:
+            value = getattr(name, bibstring_type)
+            if not value:
                 return ""
-            return f"{getattr(name, bibstring_type)}"
+            return f"{value}"
 
         case _:
             raise TypeError("Invalid type for renderable")

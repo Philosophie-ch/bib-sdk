@@ -1,5 +1,5 @@
 import traceback
-from typing import Tuple, Literal, TypedDict, TypeGuard, Any
+from typing import Tuple, Literal, TypedDict, TypeGuard
 from aletk.ResultMonad import Ok, Err
 from aletk.utils import get_logger, remove_extra_whitespace
 from philoch_bib_sdk.converters.plaintext.author.parser import parse_author
@@ -96,7 +96,7 @@ class ParsedBibItemData(TypedDict, total=False):
     _num_sort: str
 
 
-def _is_valid_bibtex_entry_type(value: Any) -> TypeGuard[TBibTeXEntryType]:
+def _is_valid_bibtex_entry_type(value: object) -> TypeGuard[TBibTeXEntryType]:
     """
     TypeGuard function to validate if a value is a valid BibTeX entry type.
     """
@@ -168,7 +168,7 @@ def parse_keywords(level1: str, level2: str, level3: str) -> KeywordsAttr | None
     )
 
 
-def _is_valid_pubstate(value: Any) -> TypeGuard[TPubState]:
+def _is_valid_pubstate(value: object) -> TypeGuard[TPubState]:
     """
     TypeGuard function to validate if a value is a valid publication state.
     """
@@ -185,7 +185,7 @@ def parse_pubstate(text: str) -> TPubState:
         return ""
 
 
-def _is_valid_epoch(value: Any) -> TypeGuard[TEpoch]:
+def _is_valid_epoch(value: object) -> TypeGuard[TEpoch]:
     """
     TypeGuard function to validate if a value is a valid epoch.
     """
@@ -202,7 +202,7 @@ def parse_epoch(text: str) -> TEpoch:
         return ""
 
 
-def _is_valid_language_id(value: Any) -> TypeGuard[TLanguageID]:
+def _is_valid_language_id(value: object) -> TypeGuard[TLanguageID]:
     """
     TypeGuard function to validate if a value is a valid language ID.
     """
@@ -231,7 +231,7 @@ def _create_bibstring_attr(value: str, bibstring_type: TBibString) -> BibStringA
         return BibStringAttr(simplified=value)
 
 
-def parse_bibitem(data: ParsedBibItemData, bibstring_type: TBibString = "latex") -> Ok[BibItem] | Err:
+def parse_bibitem(data: dict[str, str], bibstring_type: TBibString = "latex") -> Ok[BibItem] | Err:
     """
     Parse a bibitem from a dictionary of string fields into a BibItem object.
     """

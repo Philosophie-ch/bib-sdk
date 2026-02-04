@@ -15,11 +15,11 @@ def format_journal(journal: Maybe[Journal], bibstring_type: TBibString) -> str:
             return ""
 
         case Journal(name, id):
-
-            if not name:
+            value = getattr(name, bibstring_type)
+            if not value:
                 return ""
 
-            return f"{getattr(name, bibstring_type)}"
+            return f"{value}"
 
         case _:
             raise TypeError(f"Invalid type for journal: {type(journal)}. Dump: {journal!r}")

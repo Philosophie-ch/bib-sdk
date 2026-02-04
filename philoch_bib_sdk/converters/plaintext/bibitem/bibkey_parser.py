@@ -28,23 +28,31 @@ def _parse_bibkey_author(text: str) -> Tuple[str, str]:
 
 def _parse_bibkey_date_int_part(text: str) -> Tuple[int | None, int | None]:
 
-    char_index_type_d = {i: (char, char.isdigit()) for i, char in enumerate(text)}
+    # Handle optional leading minus sign for negative years (e.g., -380 for ancient texts)
+    start = 0
+    negative = False
+    if text.startswith("-"):
+        negative = True
+        start = 1
 
     year_l: list[str] = []
     int_breakpoint = None
-    for i, (char, is_digit) in char_index_type_d.items():
-        if is_digit:
+    for i in range(start, len(text)):
+        char = text[i]
+        if char.isdigit():
             year_l.append(char)
             int_breakpoint = i
         else:
             break
 
-    if year_l != []:
-        year_int = int(f"{''.join(year_l)}")
+    if year_l:
+        year_int = int("".join(year_l))
+        if negative:
+            year_int = -year_int
     else:
         year_int = None
 
-    if year_int and len(f"{year_int}") > 4:
+    if year_int is not None and abs(year_int) > 9999:
         raise ValueError(f"Unexpected year value in '{text}': is not a valid year or publication state")
 
     return year_int, int_breakpoint

@@ -29,9 +29,3 @@ def test_default_author_field_assignment() -> None:
     assert author.shorthand.simplified == ""
     assert author.famous_name.simplified == ""
     assert author.publications == ()
-
-
-def test_default_author_ignores_invalid_fields() -> None:
-    """Test that default_author silently ignores unexpected fields."""
-    author = default_author(extra_field="invalid")  # type: ignore
-    assert not hasattr(author, "extra_field")

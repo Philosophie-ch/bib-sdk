@@ -1,0 +1,4 @@
+bibkey,entry_type,title,author,date,author_key,journal,journal_key,publisher,publisher_key
+kant:1781,book,Kritik der reinen Vernunft,"Kant, Immanuel",1781,kant_i,,,Cambridge University Press,cambridge_up
+smith:2020,article,Test Article on Philosophy,"Smith, John and Doe, Jane",2020,"smith_j,doe_j",Journal of Philosophy,jphil,,
+plato:ancient,book,The Republic,Plato,-380,plato,,,Ancient Press,ancient_press

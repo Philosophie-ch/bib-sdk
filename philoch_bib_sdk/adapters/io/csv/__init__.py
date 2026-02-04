@@ -7,23 +7,20 @@ staged items, and writing fuzzy matching reports.
 import csv
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
 from aletk.ResultMonad import Err, Ok
 from aletk.utils import get_logger
 
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_formatter import format_bibkey
-from philoch_bib_sdk.converters.plaintext.bibitem.parser import (
-    ParsedBibItemData,
-    parse_bibitem,
-)
+from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem
 from philoch_bib_sdk.logic.models import BibItem
 from philoch_bib_sdk.logic.models_staging import BibItemStaged
 
 logger = get_logger(__name__)
 
 
-def _csv_row_to_parsed_data(row: dict[str, Any]) -> ParsedBibItemData:
+def _csv_row_to_parsed_data(row: dict[str, str]) -> dict[str, str]:
     """Convert CSV row to ParsedBibItemData, filtering empty values.
 
     Args:
@@ -34,7 +31,7 @@ def _csv_row_to_parsed_data(row: dict[str, Any]) -> ParsedBibItemData:
     """
     # Filter out empty values and create ParsedBibItemData
     # TypedDict with total=False allows any subset of fields
-    return {k: v for k, v in row.items() if v}  # type: ignore[return-value]
+    return {k: v for k, v in row.items() if v}
 
 
 def load_bibliography_csv(filename: str) -> Ok[Dict[str, BibItem]] | Err:

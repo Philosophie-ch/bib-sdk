@@ -563,17 +563,12 @@ def test_rust_batch_scorer_basic() -> None:
     results = rust_scorer.score_batch(subjects, candidates, top_n=2, min_score=0.0)
 
     assert len(results) == 1  # One subject
-    # Handle dict output from Rust
-    result_matches = results[0].get("matches", []) if isinstance(results[0], dict) else results[0].matches
+    result_matches = results[0]["matches"]
     assert len(result_matches) >= 1  # At least one match
     # First match should be the exact match with high score
     first_match = result_matches[0]
-    if isinstance(first_match, dict):
-        assert first_match["candidate_index"] == 0
-        assert first_match["total_score"] > 100.0  # High score for exact match
-    else:
-        assert first_match.candidate_index == 0
-        assert first_match.total_score > 100.0  # High score for exact match
+    assert first_match["candidate_index"] == 0
+    assert first_match["total_score"] > 100.0  # High score for exact match
 
 
 def test_stage_bibitems_batch_rust_integration() -> None:

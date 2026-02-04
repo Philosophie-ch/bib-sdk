@@ -1,14 +1,15 @@
 """ODS (OpenDocument Spreadsheet) adapters for bibliography I/O operations."""
 
 import traceback
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple
 from pathlib import Path
 
 from aletk.ResultMonad import Ok, Err
 from aletk.utils import get_logger
 
 from philoch_bib_sdk.logic.models import BibItem
-from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem, ParsedBibItemData
+from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem
+from philoch_bib_sdk.logic.models import TBibString
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_formatter import format_bibkey
 
 lgr = get_logger(__name__)
@@ -28,20 +29,19 @@ def _normalize_column_name(name: str) -> str:
     return name.replace("-", "_")
 
 
-def _ods_row_to_parsed_data(row: dict[str, Any]) -> ParsedBibItemData:
+def _ods_row_to_parsed_data(row: dict[str, object]) -> dict[str, str]:
     """
     Convert an ODS row (dict) to ParsedBibItemData.
 
-    This helper exists to isolate the type: ignore directive.
     Polars returns dict[str, Any] while ParsedBibItemData is a TypedDict.
     We filter out None/empty values and normalize column names.
     """
     normalized = {_normalize_column_name(k): str(v) if v is not None else "" for k, v in row.items()}
-    return {k: v for k, v in normalized.items() if v}  # type: ignore[return-value]
+    return {k: v for k, v in normalized.items() if v}
 
 
 def load_bibliography_ods(
-    filename: str, max_rows: int | None = None, bibstring_type: str = "simplified"
+    filename: str, max_rows: int | None = None, bibstring_type: TBibString = "simplified"
 ) -> Ok[Dict[str, BibItem]] | Err:
     """
     Load a bibliography from an ODS file.
@@ -80,7 +80,7 @@ def load_bibliography_ods(
         for i, row in enumerate(rows, start=2):  # Start at 2 because row 1 is header
             try:
                 parsed_data = _ods_row_to_parsed_data(row)
-                result = parse_bibitem(parsed_data, bibstring_type=bibstring_type)  # type: ignore[arg-type]
+                result = parse_bibitem(parsed_data, bibstring_type=bibstring_type)
 
                 if isinstance(result, Err):
                     errors.append(f"Row {i}: {result.message}")
