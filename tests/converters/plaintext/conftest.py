@@ -1,7 +1,6 @@
 import csv
 import io
 import pytest
-from philoch_bib_sdk.converters.plaintext.bibitem.parser import ParsedBibItemData
 
 # Clean CSV data with problematic entries removed
 CSV_BIBITEM_TEST_DATA = r"""_to_do_general,_change_request,entry_type,bibkey,author,_author_ids,editor,_editor_ids,author_ids,options,shorthand,date,pubstate,title,_title_unicode,booktitle,crossref,journal,journal_id,volume,number,pages,eid,series,address,institution,school,publisher,publisher_id,type,edition,note,_issuetitle,_guesteditor,_extra_note,urn,eprint,doi,url,_kw_level1,_kw_level2,_kw_level3,_epoch,_person,_comm_for_profile_bib,_langid,_lang_der,_further_refs,_depends_on,_dltc_num,_spec_interest,_note_perso,_note_stock,_note_status,_num_inwork_coll,_num_inwork,_num_coll,_dltc_copyediting_note,_note_missing,_num_sort
@@ -115,7 +114,7 @@ def clean_field_value(value: str) -> str:
     return value
 
 
-def parse_csv_to_bibitem_data(csv_data: str) -> list[ParsedBibItemData]:
+def parse_csv_to_bibitem_data(csv_data: str) -> list[dict[str, str]]:
     """Convert CSV data to ParsedBibItemData objects."""
     entries = []
     reader = csv.DictReader(io.StringIO(csv_data))
@@ -126,7 +125,7 @@ def parse_csv_to_bibitem_data(csv_data: str) -> list[ParsedBibItemData]:
         further_refs = clean_field_value(row.get("_further_refs", ""))
 
         # Convert CSV row to ParsedBibItemData format
-        entry: ParsedBibItemData = {}
+        entry: dict[str, str] = {}
 
         # Map all fields from CSV to ParsedBibItemData
         field_mapping = {
@@ -193,7 +192,7 @@ def parse_csv_to_bibitem_data(csv_data: str) -> list[ParsedBibItemData]:
         for csv_field, parsed_field in field_mapping.items():
             value = row.get(csv_field, "")
             if value:
-                entry[parsed_field] = value  # type: ignore
+                entry[parsed_field] = value
 
         # Apply field cleaning for specific fields
         if "_further_refs" in entry:
@@ -207,6 +206,6 @@ def parse_csv_to_bibitem_data(csv_data: str) -> list[ParsedBibItemData]:
 
 
 @pytest.fixture
-def parsed_bibitem_entries() -> list[ParsedBibItemData]:
+def parsed_bibitem_entries() -> list[dict[str, str]]:
     """Provide parsed bibitem entries for testing."""
     return parse_csv_to_bibitem_data(CSV_BIBITEM_TEST_DATA)

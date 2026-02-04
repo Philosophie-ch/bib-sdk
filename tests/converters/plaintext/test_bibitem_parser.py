@@ -1,6 +1,6 @@
-from typing import TypeGuard, Any
+from typing import TypeGuard
 from aletk.ResultMonad import Ok, Err
-from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem, ParsedBibItemData
+from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem
 from philoch_bib_sdk.logic.models import (
     BibItem,
     BibKeyAttr,
@@ -15,12 +15,12 @@ from philoch_bib_sdk.logic.models import (
 )
 
 
-def _is_valid_bibstring_type(value: Any) -> TypeGuard[TBibString]:
+def _is_valid_bibstring_type(value: object) -> TypeGuard[TBibString]:
     """TypeGuard function to validate if a value is a valid TBibString."""
     return isinstance(value, str) and value in BIB_STRING_VALUES
 
 
-def test_parse_bibitem(parsed_bibitem_entries: list[ParsedBibItemData]) -> None:
+def test_parse_bibitem(parsed_bibitem_entries: list[dict[str, str]]) -> None:
     """Test that all 50 entries can be successfully parsed."""
     successful_parses = 0
     failed_entries = []
@@ -69,7 +69,7 @@ def test_parse_bibitem(parsed_bibitem_entries: list[ParsedBibItemData]) -> None:
     assert success_rate >= 0.75, f"Success rate too low: {success_rate:.2%}"
 
 
-def test_parse_specific_entries(parsed_bibitem_entries: list[ParsedBibItemData]) -> None:
+def test_parse_specific_entries(parsed_bibitem_entries: list[dict[str, str]]) -> None:
     """Test parsing of specific entries with known characteristics."""
 
     # Test first entry (incollection)
@@ -118,7 +118,7 @@ def test_parse_specific_entries(parsed_bibitem_entries: list[ParsedBibItemData])
                 break
 
 
-def test_parse_empty_fields(parsed_bibitem_entries: list[ParsedBibItemData]) -> None:
+def test_parse_empty_fields(parsed_bibitem_entries: list[dict[str, str]]) -> None:
     """Test that empty fields are handled correctly."""
 
     # Find an entry with some empty fields
@@ -143,7 +143,7 @@ def test_parse_empty_fields(parsed_bibitem_entries: list[ParsedBibItemData]) -> 
 def test_parse_invalid_bibkey() -> None:
     """Test error handling for invalid bibkey."""
 
-    invalid_entry: ParsedBibItemData = {
+    invalid_entry: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "invalid-bibkey-format",  # Missing colon separator
         "author": "Test Author",
@@ -156,7 +156,7 @@ def test_parse_invalid_bibkey() -> None:
     assert "bibkey" in result.message.lower()
 
 
-def test_parse_different_bibstring_types(parsed_bibitem_entries: list[ParsedBibItemData]) -> None:
+def test_parse_different_bibstring_types(parsed_bibitem_entries: list[dict[str, str]]) -> None:
     """Test parsing with different bibstring types."""
 
     entry = parsed_bibitem_entries[0]
@@ -177,7 +177,7 @@ def test_parse_different_bibstring_types(parsed_bibitem_entries: list[ParsedBibI
 def test_parse_complex_fields() -> None:
     """Test parsing of complex fields like editors, pages, dates."""
 
-    complex_entry: ParsedBibItemData = {
+    complex_entry: dict[str, str] = {
         "entry_type": "@incollection",
         "bibkey": "smith-johnson:2020a",
         "author": "Smith, John and Johnson, Jane",
@@ -251,7 +251,7 @@ def test_parse_complex_fields() -> None:
 def test_parse_minimal_entry() -> None:
     """Test parsing of minimal entry with only required fields."""
 
-    minimal_entry: ParsedBibItemData = {
+    minimal_entry: dict[str, str] = {
         "entry_type": "@misc",
         "bibkey": "minimal:2024",
         "title": "Minimal Entry",
@@ -281,7 +281,7 @@ def test_parse_minimal_entry() -> None:
 def test_parse_special_characters() -> None:
     """Test parsing entries with special LaTeX characters."""
 
-    special_entry: ParsedBibItemData = {
+    special_entry: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "muller:2023",  # Changed from müller to muller to fix bibkey parsing
         "author": r"M{\"u}ller, Hans and Garc{\'i}a, Jos{\'e}",
@@ -312,7 +312,7 @@ def test_parse_date_variations() -> None:
     """Test parsing different date formats."""
 
     # Test normal year
-    entry_year: ParsedBibItemData = {
+    entry_year: dict[str, str] = {
         "entry_type": "@book",
         "bibkey": "author:2020",
         "title": "Test Book",
@@ -325,7 +325,7 @@ def test_parse_date_variations() -> None:
 
     # Test year with month - note: 2021-03 is parsed as year-hyphen format, not year-month
     # For actual month parsing, we need proper date format like "2021-03-01"
-    entry_month: ParsedBibItemData = {
+    entry_month: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "author:2021",
         "title": "Test Article",
@@ -339,7 +339,7 @@ def test_parse_date_variations() -> None:
     assert result.out.date.day == 1
 
     # Test year-hyphen format (parsed as year_part_2_hyphen, not month)
-    entry_year_hyphen: ParsedBibItemData = {
+    entry_year_hyphen: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "author:2022",
         "title": "Test Year Hyphen",
@@ -352,7 +352,7 @@ def test_parse_date_variations() -> None:
     assert result.out.date.year_part_2_hyphen == 5  # This is parsed as year range, not month
 
     # Test full date
-    entry_full: ParsedBibItemData = {
+    entry_full: dict[str, str] = {
         "entry_type": "@misc",
         "bibkey": "author:2022",
         "title": "Test Misc",
@@ -366,7 +366,7 @@ def test_parse_date_variations() -> None:
     assert result.out.date.day == 25
 
     # Test empty date
-    entry_no_date: ParsedBibItemData = {
+    entry_no_date: dict[str, str] = {
         "entry_type": "@unpublished",
         "bibkey": "author:unpub",
         "title": "Unpublished Work",
@@ -391,7 +391,7 @@ def test_parse_publication_states() -> None:
         else:
             bibkey = "author:2024"
 
-        entry: ParsedBibItemData = {
+        entry: dict[str, str] = {
             "entry_type": "@unpublished",
             "bibkey": bibkey,
             "title": f"Test {pubstate or 'default'}",
@@ -406,7 +406,7 @@ def test_parse_publication_states() -> None:
 def test_parse_keywords() -> None:
     """Test parsing keyword hierarchy."""
 
-    entry_with_keywords: ParsedBibItemData = {
+    entry_with_keywords: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "author:2024",
         "title": "Keyword Test",
@@ -426,7 +426,7 @@ def test_parse_keywords() -> None:
     assert bibitem._kws.level_3.name == "Applied Ethics"
 
     # Test partial keywords
-    entry_partial: ParsedBibItemData = {
+    entry_partial: dict[str, str] = {
         "entry_type": "@book",
         "bibkey": "author:2024",
         "title": "Partial Keywords",
@@ -449,7 +449,7 @@ def test_parse_keywords() -> None:
 def test_parse_cross_references() -> None:
     """Test parsing further_refs and depends_on fields."""
 
-    entry: ParsedBibItemData = {
+    entry: dict[str, str] = {
         "entry_type": "@inproceedings",
         "bibkey": "author:2024",
         "title": "Cross Reference Test",
@@ -485,7 +485,7 @@ def test_parse_cross_references() -> None:
 def test_parse_numeric_fields() -> None:
     """Test parsing of numeric fields like edition, dltc_num, etc."""
 
-    entry: ParsedBibItemData = {
+    entry: dict[str, str] = {
         "entry_type": "@book",
         "bibkey": "author:2024",
         "title": "Numeric Fields Test",
@@ -508,7 +508,7 @@ def test_parse_numeric_fields() -> None:
     assert bibitem._num_sort == 100
 
     # Test with empty numeric fields
-    entry_empty: ParsedBibItemData = {
+    entry_empty: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "author:2024",
         "title": "Empty Numeric Fields",
@@ -535,7 +535,7 @@ def test_parse_entry_type_variations() -> None:
     """Test parsing various entry type formats."""
 
     # Test with @ prefix
-    entry_with_at: ParsedBibItemData = {
+    entry_with_at: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "test:2024",
         "title": "Test",
@@ -546,7 +546,7 @@ def test_parse_entry_type_variations() -> None:
     assert result.out.entry_type == "article"
 
     # Test without @ prefix
-    entry_without_at: ParsedBibItemData = {
+    entry_without_at: dict[str, str] = {
         "entry_type": "book",
         "bibkey": "test:2024",
         "title": "Test",
@@ -557,7 +557,7 @@ def test_parse_entry_type_variations() -> None:
     assert result.out.entry_type == "book"
 
     # Test unknown entry type
-    entry_unknown: ParsedBibItemData = {
+    entry_unknown: dict[str, str] = {
         "entry_type": "@weirdtype",
         "bibkey": "test:2024",
         "title": "Test",
@@ -568,7 +568,7 @@ def test_parse_entry_type_variations() -> None:
     assert result.out.entry_type == "UNKNOWN"
 
     # Test empty entry type
-    entry_empty: ParsedBibItemData = {
+    entry_empty: dict[str, str] = {
         "entry_type": "",
         "bibkey": "test:2024",
         "title": "Test",
@@ -582,7 +582,7 @@ def test_parse_entry_type_variations() -> None:
 def test_parse_epoch_and_language() -> None:
     """Test parsing epoch and language fields."""
 
-    entry: ParsedBibItemData = {
+    entry: dict[str, str] = {
         "entry_type": "@book",
         "bibkey": "philosopher:1800",
         "title": "Historical Work",
@@ -601,7 +601,7 @@ def test_parse_epoch_and_language() -> None:
     assert bibitem._lang_der == "Derived from German"
 
     # Test invalid epoch and language
-    entry_invalid: ParsedBibItemData = {
+    entry_invalid: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "author:2024",
         "title": "Test",
@@ -622,7 +622,7 @@ def test_parse_error_handling() -> None:
     """Test various error scenarios."""
 
     # Test with invalid date format
-    entry_bad_date: ParsedBibItemData = {
+    entry_bad_date: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "test:2024",
         "title": "Test",
@@ -633,7 +633,7 @@ def test_parse_error_handling() -> None:
     assert "date" in result.message.lower()
 
     # Test with invalid pages format
-    entry_bad_pages: ParsedBibItemData = {
+    entry_bad_pages: dict[str, str] = {
         "entry_type": "@article",
         "bibkey": "test:2024",
         "title": "Test",
@@ -645,7 +645,7 @@ def test_parse_error_handling() -> None:
     assert "page" in result.message.lower()
 
     # Test with malformed author
-    entry_bad_author: ParsedBibItemData = {
+    entry_bad_author: dict[str, str] = {
         "entry_type": "@book",
         "bibkey": "test:2024",
         "title": "Test",

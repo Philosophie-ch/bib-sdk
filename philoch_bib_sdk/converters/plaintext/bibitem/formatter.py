@@ -21,10 +21,8 @@ def format_entry_type(entry_type: TBibTeXEntryType) -> str:
     match entry_type:
         case "UNKNOWN":
             return "UNKNOWN"
-        case _ if entry_type:
-            return f"@{entry_type}"
         case _:
-            return ""
+            return f"@{entry_type}"
 
 
 class FormattedBibItem(TypedDict, total=True):

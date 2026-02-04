@@ -12,11 +12,12 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aletk>=0.1.6",
+    "aletk>=0.1.8",
     "attrs>=25.3.0",
     "polars>=1.32.3",
     "pydantic>=2.11.9",
     "cytoolz>=1.0.1",
+    "httpx>=0.28.0",
 ]
 
 [build-system]
@@ -33,6 +34,7 @@ attrs = "^25.3.0"
 polars = "^1.32.3"
 pydantic = "^2.11.9"
 cytoolz = "^1.0.1"
+httpx = "^0.28.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
@@ -49,7 +51,19 @@ maturin = "^1.0"
 python_version = "3.13"
 strict = true
 explicit_package_bases = true
+warn_unreachable = true
+disallow_any_explicit = true
+disallow_any_unimported = true
+disallow_any_decorated = true
+enable_error_code = [
+    "possibly-undefined",
+    "redundant-expr",
+    "truthy-bool",
+    "truthy-iterable",
+    "exhaustive-match",
+]
 mypy_path = "."
+plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -62,6 +76,12 @@ testpaths = ["tests"]
 pythonpath = ["."]
 env = [
 ]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
 
 [[tool.mypy.overrides]]
 module = [
