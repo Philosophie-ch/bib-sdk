@@ -13,9 +13,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "aletk>=0.1.8",
-    "attrs>=25.3.0",
-    "polars>=1.32.3",
-    "pydantic>=2.11.9",
+    "attrs>=25.4.0",
+    "polars>=1.38.0",
+    "pydantic>=2.12.5",
     "httpx>=0.28.0",
 ]
 
@@ -24,10 +24,10 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-aletk = "^0.1.6"
-attrs = "^25.3.0"
-polars = "^1.32.3"
-pydantic = "^2.11.9"
+aletk = "^0.1.8"
+attrs = "^25.4.0"
+polars = "^1.38.0"
+pydantic = "^2.12.5"
 httpx = "^0.28.0"
 
 [tool.poetry.group.dev.dependencies]
