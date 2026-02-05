@@ -12,12 +12,6 @@ from philoch_bib_sdk.logic.models import (
     PageAttr,
     TBibString,
 )
-from philoch_bib_sdk.logic.models_staging import (
-    BibItemStaged,
-    Match,
-    PartialScore,
-    ScoreComponent,
-)
 
 __all__ = [
     # Core models
@@ -31,9 +25,4 @@ __all__ = [
     "PageAttr",
     "TBibString",
     "TBibTeXEntryType",
-    # Staging models
-    "BibItemStaged",
-    "Match",
-    "PartialScore",
-    "ScoreComponent",
 ]

@@ -1,4 +1,4 @@
-name: Lint
+name: Lint, Type Check, Test, and Build
 
 on:
   push:
@@ -23,9 +23,6 @@ jobs:
       with:
         python-version: '3.13'
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
     - name: Install poetry
       run: |
         sudo apt-get update
@@ -38,12 +35,6 @@ jobs:
         poetry env use 3.13
         poetry install --no-root
 
-    - name: Build Rust extension
-      run: poetry run maturin develop
-
-    - name: Run clippy
-      run: cargo clippy -- -D warnings
-
     - name: Run black
       run: poetry run black --check .
 
@@ -53,5 +44,5 @@ jobs:
     - name: Run pytest
       run: poetry run pytest
 
-    - name: Build wheel with maturin
-      run: poetry run maturin build --release
+    - name: Build package
+      run: poetry build

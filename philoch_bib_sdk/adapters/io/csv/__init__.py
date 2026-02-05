@@ -15,7 +15,6 @@ from aletk.utils import get_logger
 from philoch_bib_sdk.converters.plaintext.bibitem.bibkey_formatter import format_bibkey
 from philoch_bib_sdk.converters.plaintext.bibitem.parser import parse_bibitem
 from philoch_bib_sdk.logic.models import BibItem
-from philoch_bib_sdk.logic.models_staging import BibItemStaged
 
 logger = get_logger(__name__)
 
@@ -238,68 +237,3 @@ def load_staged_csv(filename: str) -> Ok[Tuple[BibItem, ...]] | Err:
         )
 
 
-def write_report_csv(filename: str, staged: Tuple[BibItemStaged, ...]) -> Ok[None] | Err:
-    """Write fuzzy matching report to CSV file.
-
-    Output format: Uses BibItemStaged.to_csv_row() with columns:
-    - staged_bibkey, staged_title, staged_author, staged_year
-    - num_matches, best_match_score, best_match_bibkey
-    - top_matches_json (JSON-encoded match details)
-    - search_time_ms, candidates_searched
-
-    Args:
-        filename: Path to output CSV file (without extension)
-        staged: Tuple of staged items with matches
-
-    Returns:
-        Ok[None] on success, Err on failure
-    """
-    try:
-        # Add .csv extension if not present
-        output_path = Path(filename)
-        if output_path.suffix != ".csv":
-            output_path = output_path.with_suffix(".csv")
-
-        if not staged:
-            logger.warning("No staged items to write")
-            # Create empty file with headers
-            with open(output_path, "w", encoding="utf-8", newline="") as f:
-                simple_writer = csv.writer(f)
-                simple_writer.writerow(
-                    [
-                        "staged_bibkey",
-                        "staged_title",
-                        "staged_author",
-                        "staged_year",
-                        "num_matches",
-                        "best_match_score",
-                        "best_match_bibkey",
-                        "top_matches_json",
-                        "search_time_ms",
-                        "candidates_searched",
-                    ]
-                )
-            logger.info(f"Created empty report at {output_path}")
-            return Ok(None)
-
-        # Convert to CSV rows
-        rows = tuple(item.to_csv_row() for item in staged)
-
-        # Write to CSV
-        with open(output_path, "w", encoding="utf-8", newline="") as f:
-            if rows:
-                fieldnames = list(rows[0].keys())
-                dict_writer = csv.DictWriter(f, fieldnames=fieldnames)
-                dict_writer.writeheader()
-                dict_writer.writerows(rows)
-
-        logger.info(f"Successfully wrote {len(staged)} items to {output_path}")
-        return Ok(None)
-
-    except Exception as e:
-        return Err(
-            message=f"Failed to write report to {filename}: {e.__class__.__name__}: {e}",
-            code=-1,
-            error_type=e.__class__.__name__,
-            error_trace=traceback.format_exc(),
-        )
