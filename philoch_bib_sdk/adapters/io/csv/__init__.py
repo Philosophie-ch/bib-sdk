@@ -235,5 +235,3 @@ def load_staged_csv(filename: str) -> Ok[Tuple[BibItem, ...]] | Err:
             error_type=e.__class__.__name__,
             error_trace=traceback.format_exc(),
         )
-
-
