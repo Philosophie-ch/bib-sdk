@@ -12,14 +12,12 @@ from aletk.ResultMonad import Err, Ok
 from philoch_bib_sdk.adapters.io.csv import (
     load_bibliography_csv,
     load_staged_csv,
-    write_report_csv,
 )
 from philoch_bib_sdk.adapters.io.ods import (
     load_bibliography_ods,
     load_staged_ods,
 )
 from philoch_bib_sdk.logic.models import BibItem
-from philoch_bib_sdk.logic.models_staging import BibItemStaged
 
 
 def load_bibliography(filename: str, max_rows: int | None = None) -> Ok[Dict[str, BibItem]] | Err:
@@ -86,30 +84,7 @@ def load_staged(filename: str, max_rows: int | None = None) -> Ok[Tuple[BibItem,
             )
 
 
-def write_report(filename: str, staged: Tuple[BibItemStaged, ...], output_format: str = "csv") -> Ok[None] | Err:
-    """Write fuzzy matching report with format selection.
-
-    Args:
-        filename: Path to output file (extension will be added based on format)
-        staged: Tuple of staged items with matches
-        output_format: Output format ("csv", etc.)
-
-    Returns:
-        Ok[None] on success, Err on failure
-    """
-    match output_format.lower():
-        case "csv":
-            return write_report_csv(filename, staged)
-        case _:
-            return Err(
-                message=f"Unsupported output format: {output_format}. Supported: csv",
-                code=-1,
-                error_type="UnsupportedFormatError",
-            )
-
-
 __all__ = [
     "load_bibliography",
     "load_staged",
-    "write_report",
 ]
